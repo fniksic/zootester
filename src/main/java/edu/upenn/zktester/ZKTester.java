@@ -8,6 +8,6 @@ public class ZKTester {
     private static final Logger LOG = LogManager.getLogger();
 
     public static void main(final String[] args) {
-        LOG.info("Hello!");
+
     }
 }
