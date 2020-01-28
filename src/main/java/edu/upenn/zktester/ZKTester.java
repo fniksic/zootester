@@ -12,13 +12,14 @@ public class ZKTester {
 
     private static final Logger LOG = LoggerFactory.getLogger(ZKTester.class);
 
-    public static void main(final String[] args) {
-//        final Scenario scenario = new DivergenceResyncScenario();
+    private static void runRandom(final int numThreads, final int executionsPerThread, final int numPhases,
+                                  final int faultBudget, final int requestBudget) {
         final List<Thread> threads = new ArrayList<>();
-        for (int i = 0; i < 16; ++i) {
+        for (int i = 0; i < numThreads; ++i) {
             final Thread thread = new Thread(() -> {
                 try {
-                    final Scenario scenario = new RandomScenario(1000, 3, 1, 2);
+                    final Scenario scenario = new RandomScenario(executionsPerThread,
+                            numPhases, faultBudget, requestBudget);
                     scenario.init();
                     scenario.execute();
                 } catch (final Exception e) {
@@ -35,5 +36,18 @@ public class ZKTester {
                 LOG.info("Interrupted from waiting on {}", thread.getName());
             }
         }
+    }
+
+    public static void main(final String[] args) {
+        runRandom(20, 50, 3, 1, 2);
+//        try {
+//            final Scenario scenario = new DivergenceResyncScenario();
+//            scenario.init();
+//            scenario.execute();
+//        } catch (final Exception e) {
+//            LOG.error("Exception failure", e);
+//        } catch (final AssertionFailureError e) {
+//            LOG.error("Assertion failure", e);
+//        }
     }
 }
