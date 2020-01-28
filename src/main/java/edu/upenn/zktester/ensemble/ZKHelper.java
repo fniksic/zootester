@@ -18,7 +18,11 @@ public class ZKHelper {
         return Files.createTempDirectory(VAR, TEMP_DIRECTORY_PREFIX);
     }
 
-    private static final AtomicInteger nextPort = new AtomicInteger(11221);
+    private static AtomicInteger nextPort = new AtomicInteger(11221);
+
+    public static void setBasePort(final int basePort) {
+        nextPort = new AtomicInteger(basePort);
+    }
 
     public static int getUniquePort() {
         return nextPort.getAndIncrement();

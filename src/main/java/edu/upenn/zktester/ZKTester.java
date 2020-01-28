@@ -1,5 +1,6 @@
 package edu.upenn.zktester;
 
+import edu.upenn.zktester.ensemble.ZKHelper;
 import edu.upenn.zktester.scenario.*;
 import edu.upenn.zktester.util.AssertionFailureError;
 import edu.upenn.zktester.util.Config;
@@ -14,6 +15,7 @@ public class ZKTester {
     public static void main(final String[] args) {
         try {
             final Config config = Config.parseArgs(args);
+            ZKHelper.setBasePort(config.getBasePort());
             final Scenario scenario;
             if (config.getThreads() > 1) {
                 scenario = new ParallelScenario(config);
