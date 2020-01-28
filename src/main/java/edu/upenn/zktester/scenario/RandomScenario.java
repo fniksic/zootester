@@ -32,22 +32,18 @@ public class RandomScenario implements Scenario {
     private final Random random = new Random();
     private final ZKEnsemble zkEnsemble = new ZKEnsemble(TOTAL_SERVERS);
 
-    private int numExecutions;
-    private int numPhases;
+    private Config config;
     private MinimalQuorumGenerator quorumGenerator;
     private RandomSubsetGenerator subsetGenerator;
     private FaultGenerator faultGenerator;
 
     @Override
     public void init(final Config config) throws IOException {
-        if (config.hasSeed()) {
-            random.setSeed(config.getSeed());
-        }
-        this.numExecutions = config.getExecutions();
-        this.numPhases = config.getPhases();
+        this.config = config;
         this.quorumGenerator = new MinimalQuorumGenerator(TOTAL_SERVERS, random);
         this.subsetGenerator = new RandomSubsetGenerator(random);
-        this.faultGenerator = new ExactFaultGenerator(numPhases, QUORUM_SIZE - 1, config.getFaults(), random);
+        this.faultGenerator = new ExactFaultGenerator(config.getPhases(), QUORUM_SIZE - 1,
+                config.getFaults(), random);
         zkEnsemble.init();
     }
 
@@ -56,8 +52,13 @@ public class RandomScenario implements Scenario {
         int failedAssertions = 0;
         int failedOtherwise = 0;
 
-        for (int i = 1; i <= numExecutions; ++i) {
-            final long seed = random.nextLong();
+        for (int i = 1; i <= config.getExecutions(); ++i) {
+            final long seed;
+            if (config.hasSeed()) {
+                seed = config.getSeed();
+            } else {
+                seed = random.nextLong();
+            }
             random.setSeed(seed);
             LOG.info("Starting execution {}: seed = {}", i, seed);
             try {
@@ -73,7 +74,7 @@ public class RandomScenario implements Scenario {
         }
 
         LOG.info("Finished executions:\n\tFailed assertions: {}\tFailed otherwise: {}\tTotal: {}",
-                failedAssertions, failedOtherwise, numExecutions);
+                failedAssertions, failedOtherwise, config.getExecutions());
     }
 
     private void singleExecution() throws Exception {
@@ -93,7 +94,7 @@ public class RandomScenario implements Scenario {
             });
             zkEnsemble.stopAllServers();
 
-            for (int phase = 1; phase <= numPhases; ++phase) {
+            for (int phase = 1; phase <= config.getPhases(); ++phase) {
                 final List<Integer> serversToStart = quorumGenerator.generate();
                 zkEnsemble.startServers(serversToStart);
 
