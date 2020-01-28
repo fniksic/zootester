@@ -12,13 +12,18 @@ public class FaultGenerator {
     private int remainingRounds;
     private int remainingFaultBudget;
 
-    private final Random random = new Random();
+    private final Random random;
 
     public FaultGenerator(final int totalRounds, final int maxFaultsPerRound, final int faultBudget) {
+        this(totalRounds, maxFaultsPerRound, faultBudget, new Random());
+    }
+
+    public FaultGenerator(final int totalRounds, final int maxFaultsPerRound, final int faultBudget, final Random random) {
         this.totalArrangements = new int[totalRounds + 1][faultBudget + 1];
         this.maxFaultsPerRound = maxFaultsPerRound;
         this.totalRounds = totalRounds;
         this.faultBudget = faultBudget;
+        this.random = random;
         reset();
         computeArrangements();
     }
@@ -28,7 +33,7 @@ public class FaultGenerator {
         remainingFaultBudget = faultBudget;
     }
 
-    public int generateFaults() {
+    public int generate() {
         if (remainingRounds == 0) {
             return 0;
         }
