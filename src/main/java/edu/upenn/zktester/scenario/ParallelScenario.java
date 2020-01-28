@@ -4,7 +4,6 @@ import edu.upenn.zktester.util.Config;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -19,11 +18,11 @@ public class ParallelScenario implements Scenario {
     }
 
     @Override
-    public void init(final Config config) throws IOException {
+    public void init(final Config config) {
     }
 
     @Override
-    public void execute() throws Exception {
+    public void execute() {
         final List<Thread> threads = new ArrayList<>();
         for (int i = 0; i < config.getThreads(); ++i) {
             final Thread thread = new Thread(() -> {
