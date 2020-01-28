@@ -1,6 +1,8 @@
 package edu.upenn.zktester.scenario;
 
+import edu.upenn.zktester.ensemble.ConsistentValues;
 import edu.upenn.zktester.ensemble.ZKEnsemble;
+import edu.upenn.zktester.ensemble.ZKProperty;
 import edu.upenn.zktester.fault.ExactFaultGenerator;
 import edu.upenn.zktester.fault.FaultGenerator;
 import edu.upenn.zktester.subset.MinimalQuorumGenerator;
@@ -9,14 +11,11 @@ import edu.upenn.zktester.util.Assert;
 import edu.upenn.zktester.util.AssertionFailureError;
 import edu.upenn.zktester.util.Config;
 import org.apache.zookeeper.CreateMode;
-import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.ZooDefs.Ids;
-import org.apache.zookeeper.ZooKeeper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
 import java.util.stream.Collectors;
@@ -28,6 +27,7 @@ public class RandomScenario implements Scenario {
     private static final int TOTAL_SERVERS = 3;
     private static final int QUORUM_SIZE = 2;
     private static final List<String> KEYS = List.of("/key0", "/key1");
+    private static final ZKProperty CONSISTENT_VALUES = new ConsistentValues(KEYS);
 
     private final Random random = new Random();
     private final ZKEnsemble zkEnsemble = new ZKEnsemble(TOTAL_SERVERS);
@@ -127,31 +127,8 @@ public class RandomScenario implements Scenario {
             }
 
             zkEnsemble.startAllServers();
-            Assert.assertTrue("All keys on all servers should have the same value", checkProperty());
+            final boolean result = zkEnsemble.checkProperty(CONSISTENT_VALUES);
+            Assert.assertTrue("All keys on all servers should have the same value", result);
         }
-    }
-
-    private boolean checkProperty() throws KeeperException, InterruptedException {
-        return zkEnsemble.checkProperty(zookeepers -> {
-            boolean result = true;
-            for (final var key : KEYS) {
-                final ZooKeeper zk0 = zookeepers.get(0);
-                final byte[] rawValue0 = zk0.getData(key, false, null);
-                LOG.info("{}\n\tAssociation: {} -> {}", zk0.toString(), key, new String(rawValue0));
-
-                final boolean valueOK = zookeepers.subList(1, zookeepers.size()).stream()
-                        .allMatch(zk -> {
-                            try {
-                                final byte[] rawValue = zk.getData(key, false, null);
-                                LOG.info("{}\n\tAssociation: {} -> {}", zk.toString(), key, new String(rawValue));
-                                return Arrays.equals(rawValue0, rawValue);
-                            } catch (final KeeperException | InterruptedException e) {
-                                return false;
-                            }
-                        });
-                result = result && valueOK;
-            }
-            return result;
-        });
     }
 }
