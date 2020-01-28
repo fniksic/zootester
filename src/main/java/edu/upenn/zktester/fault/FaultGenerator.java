@@ -2,7 +2,7 @@ package edu.upenn.zktester.fault;
 
 import java.util.Random;
 
-public class FaultGenerator {
+public abstract class FaultGenerator {
 
     private final int[][] totalArrangements;
     private final int totalRounds;
@@ -69,7 +69,7 @@ public class FaultGenerator {
      * n bins (rounds), with the restriction that each bin can contain at most maxFaultsPerRound balls.
      */
     private void computeArrangements() {
-        totalArrangements[0][0] = 1;
+        initalizeArrangements(totalArrangements[0]);
         for (int i = 1; i <= remainingRounds; ++i) {
             int sum = 0;
             for (int j = 0; j <= remainingFaultBudget; ++j) {
@@ -81,6 +81,8 @@ public class FaultGenerator {
             }
         }
     }
+
+    protected abstract void initalizeArrangements(final int[] arrangementsZerothRow);
 
     /***
      * Finds the least index <code>i</code> such that <code>p < cumulativeProbabilities[i]</code>.

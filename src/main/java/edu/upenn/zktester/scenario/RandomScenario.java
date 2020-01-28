@@ -1,6 +1,7 @@
 package edu.upenn.zktester.scenario;
 
 import edu.upenn.zktester.ensemble.ZKEnsemble;
+import edu.upenn.zktester.fault.ExactFaultGenerator;
 import edu.upenn.zktester.fault.FaultGenerator;
 import edu.upenn.zktester.subset.MinimalQuorumGenerator;
 import edu.upenn.zktester.subset.RandomSubsetGenerator;
@@ -36,7 +37,6 @@ public class RandomScenario implements Scenario {
     private MinimalQuorumGenerator quorumGenerator;
     private RandomSubsetGenerator subsetGenerator;
     private FaultGenerator faultGenerator;
-    private FaultGenerator requestGenerator;
 
     @Override
     public void init(final Config config) throws IOException {
@@ -47,8 +47,7 @@ public class RandomScenario implements Scenario {
         this.numPhases = config.getPhases();
         this.quorumGenerator = new MinimalQuorumGenerator(TOTAL_SERVERS, random);
         this.subsetGenerator = new RandomSubsetGenerator(random);
-        this.faultGenerator = new FaultGenerator(numPhases, QUORUM_SIZE - 1, config.getFaults(), random);
-        this.requestGenerator = new FaultGenerator(numPhases, 1, config.getRequests(), random);
+        this.faultGenerator = new ExactFaultGenerator(numPhases, QUORUM_SIZE - 1, config.getFaults(), random);
         zkEnsemble.init();
     }
 
@@ -81,7 +80,6 @@ public class RandomScenario implements Scenario {
         try (final AutoCloseable cleanUp = () -> {
             zkEnsemble.stopEnsemble();
             faultGenerator.reset();
-            requestGenerator.reset();
         }) {
             zkEnsemble.startEnsemble();
 
@@ -95,38 +93,31 @@ public class RandomScenario implements Scenario {
             });
             zkEnsemble.stopAllServers();
 
-//            final List<List<Integer>> toStart = List.of(List.of(0, 1), List.of(0, 2), List.of(1, 2));
-//            final List<List<Integer>> toCrash = List.of(List.of(0), List.of(), List.of());
-//            final List<Boolean> request = List.of(true, false, true);
-//            final List<Integer> ids = List.of(1, 0, 2);
-//            final List<String> keys = List.of("/key0", "", "/key1");
-
             for (int phase = 1; phase <= numPhases; ++phase) {
                 final List<Integer> serversToStart = quorumGenerator.generate();
-//                final List<Integer> serversToStart = toStart.get(phase - 1);
                 zkEnsemble.startServers(serversToStart);
 
                 final int faults = faultGenerator.generate();
                 final List<Integer> serversToCrash = subsetGenerator.generate(serversToStart.size(), faults).stream()
                         .map(i -> serversToStart.get(i)).collect(Collectors.toList());
-//                final List<Integer> serversToCrash = toCrash.get(phase - 1);
                 zkEnsemble.crashServers(serversToCrash);
 
-                // Randomly choose whether to make a client request
-                if (requestGenerator.generate() == 1) {
-//                if (request.get(phase - 1)) {
+                // Make a client request in phases 1 and 3
+                if (phase == 1 || phase == 3) {
+                    // In this scenario the client to make request to is chosen at random among the nodes
+                    // that are up.
                     final List<Integer> serversStillRunning = serversToStart.stream()
                             .filter(i -> !serversToCrash.contains(i)).collect(Collectors.toList());
                     final int id = serversStillRunning.get(random.nextInt(serversStillRunning.size()));
-//                    final int id = ids.get(phase - 1);
-                    final String key = KEYS.get(random.nextInt(KEYS.size()));
-//                    final String key = keys.get(phase - 1);
+
+                    // We want to make requests on different keys in the two phases
+                    final String key = KEYS.get(phase / 2);
                     final int value = 100 * phase + id;
                     final byte[] rawValue = Integer.toString(value).getBytes();
                     LOG.info("Initiating request to {}: set {} -> {}", id, key, value);
                     zkEnsemble.handleRequest(id, zk -> {
                         zk.setData(key, rawValue, -1, null, null);
-                        Thread.sleep(1000);
+                        Thread.sleep(500);
                         System.gc();
                     });
                 }
