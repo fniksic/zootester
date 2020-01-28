@@ -14,9 +14,9 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 
-public class DivergenceResyncScenario implements Scenario {
+public class DivergenceResyncScenario2 implements Scenario {
 
-    private static final Logger LOG = LoggerFactory.getLogger(DivergenceResyncScenario.class);
+    private static final Logger LOG = LoggerFactory.getLogger(DivergenceResyncScenario2.class);
 
     private static final int TOTAL_SERVERS = 3;
 
@@ -61,29 +61,29 @@ public class DivergenceResyncScenario implements Scenario {
             });
             zkEnsemble.stopServers(List.of(srvA, srvB));
 
-            // Start and stop A and C
-            zkEnsemble.startServers(List.of(srvA, srvC));
-            Assert.assertTrue("Server A should be the leader", zkEnsemble.getLeader() == srvA);
-            zkEnsemble.stopServers(List.of(srvA, srvC));
-
-            // Resync B and C
+            // Start and stop B and C
             zkEnsemble.startServers(List.of(srvB, srvC));
+            Assert.assertTrue("Server B should be the leader", zkEnsemble.getLeader() == srvB);
+            zkEnsemble.stopServers(List.of(srvB, srvC));
+
+            // Resync A and C
+            zkEnsemble.startServers(List.of(srvA, srvC));
             Assert.assertTrue("Server C should be the leader", zkEnsemble.getLeader() == srvC);
 
             // Divergence
-            zkEnsemble.handleRequest(srvC, zk -> {
+            zkEnsemble.handleRequest(srvA, zk -> {
                 zk.setData(keys.get(1), "1001".getBytes(), -1, null, null);
                 Thread.sleep(500);
                 System.gc();
             });
-            zkEnsemble.stopServers(List.of(srvB, srvC));
+            zkEnsemble.stopServers(List.of(srvA, srvC));
 
             // Resync B and C
-            zkEnsemble.startServers(List.of(srvB, srvC));
+            zkEnsemble.startServers(List.of(srvA, srvC));
             Assert.assertTrue("Server C should be the leader", zkEnsemble.getLeader() == srvC);
 
             // Start A
-            zkEnsemble.startServers(List.of(srvA));
+            zkEnsemble.startServers(List.of(srvB));
             Assert.assertTrue("Server C should be the leader", zkEnsemble.getLeader() == srvC);
 
             final boolean result = checkProperty(keys);

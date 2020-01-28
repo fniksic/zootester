@@ -6,6 +6,7 @@ import edu.upenn.zktester.subset.MinimalQuorumGenerator;
 import edu.upenn.zktester.subset.RandomSubsetGenerator;
 import edu.upenn.zktester.util.Assert;
 import edu.upenn.zktester.util.AssertionFailureError;
+import edu.upenn.zktester.util.Config;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.ZooDefs.Ids;
@@ -27,28 +28,27 @@ public class RandomScenario implements Scenario {
     private static final int QUORUM_SIZE = 2;
     private static final List<String> KEYS = List.of("/key0", "/key1");
 
-    private final int numExecutions;
-    private final int numPhases;
-    private final Random random;
-    private final MinimalQuorumGenerator quorumGenerator;
-    private final RandomSubsetGenerator subsetGenerator;
-    private final FaultGenerator faultGenerator;
-    private final FaultGenerator requestGenerator;
-    private final ZKEnsemble zkEnsemble;
+    private final Random random = new Random();
+    private final ZKEnsemble zkEnsemble = new ZKEnsemble(TOTAL_SERVERS);
 
-    public RandomScenario(final int numExecutions, final int numPhases, final int faultBudget, final int requestBudget) {
-        this.numExecutions = numExecutions;
-        this.numPhases = numPhases;
-        this.random = new Random();
-        this.quorumGenerator = new MinimalQuorumGenerator(TOTAL_SERVERS, random);
-        this.subsetGenerator = new RandomSubsetGenerator(random);
-        this.faultGenerator = new FaultGenerator(numPhases, QUORUM_SIZE - 1, faultBudget, random);
-        this.requestGenerator = new FaultGenerator(numPhases, 1, requestBudget, random);
-        this.zkEnsemble = new ZKEnsemble(TOTAL_SERVERS);
-    }
+    private int numExecutions;
+    private int numPhases;
+    private MinimalQuorumGenerator quorumGenerator;
+    private RandomSubsetGenerator subsetGenerator;
+    private FaultGenerator faultGenerator;
+    private FaultGenerator requestGenerator;
 
     @Override
-    public void init() throws IOException {
+    public void init(final Config config) throws IOException {
+        if (config.hasSeed()) {
+            random.setSeed(config.getSeed());
+        }
+        this.numExecutions = config.getExecutions();
+        this.numPhases = config.getPhases();
+        this.quorumGenerator = new MinimalQuorumGenerator(TOTAL_SERVERS, random);
+        this.subsetGenerator = new RandomSubsetGenerator(random);
+        this.faultGenerator = new FaultGenerator(numPhases, QUORUM_SIZE - 1, config.getFaults(), random);
+        this.requestGenerator = new FaultGenerator(numPhases, 1, config.getRequests(), random);
         zkEnsemble.init();
     }
 
