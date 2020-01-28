@@ -101,6 +101,10 @@ public class ZKEnsemble implements Watcher {
 
 
     private void waitForClients(final States state, final List<Integer> clientIds) throws InterruptedException {
+        if (clientIds.isEmpty()) {
+            return;
+        }
+
         int iterations = 100;
         boolean notAllInState = true;
         while (notAllInState && iterations-- > 0) {

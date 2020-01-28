@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Random;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 public class RandomSubsetGenerator {
@@ -29,5 +30,9 @@ public class RandomSubsetGenerator {
         }
         Collections.sort(result);
         return result;
+    }
+
+    public List<Integer> generate(final int n) {
+        return IntStream.range(0, n).filter(i -> random.nextDouble() < 0.5).boxed().collect(Collectors.toList());
     }
 }

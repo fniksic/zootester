@@ -30,6 +30,9 @@ public class ZKTester {
                     case "random":
                         scenario = new RandomScenario();
                         break;
+                    case "paper":
+                        scenario = new TrueToThePaperScenario();
+                        break;
                     default:
                         LOG.error("Unknown scenario!");
                         throw new Exception("Unknown scenario");

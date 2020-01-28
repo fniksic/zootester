@@ -24,7 +24,7 @@ public class ConsistentValues implements ZKProperty {
         for (final var key : keys) {
             final ZooKeeper zk0 = zookeepers.get(0);
             final byte[] rawValue0 = zk0.getData(key, false, null);
-            LOG.info("{}\n\tAssociation: {} -> {}", zk0.toString(), key, new String(rawValue0));
+            LOG.info("Association: {} -> {}", key, new String(rawValue0));
 
             final boolean valueOK = zookeepers.subList(1, zookeepers.size()).stream()
                     .allMatch(zk -> {
