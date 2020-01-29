@@ -48,7 +48,7 @@ public class RandomScenario implements Scenario {
     }
 
     @Override
-    public void execute() {
+    public void execute() throws Exception {
         int failedAssertions = 0;
         int failedOtherwise = 0;
 
@@ -75,6 +75,7 @@ public class RandomScenario implements Scenario {
 
         LOG.info("Finished executions:\n\tFailed assertions: {}\tFailed otherwise: {}\tTotal: {}",
                 failedAssertions, failedOtherwise, config.getExecutions());
+        zkEnsemble.tearDown();
     }
 
     private void singleExecution() throws Exception {

@@ -1,7 +1,6 @@
 package edu.upenn.zktester.ensemble;
 
 import edu.upenn.zktester.util.Assert;
-import org.apache.zookeeper.server.admin.AdminServer;
 import org.apache.zookeeper.server.quorum.Election;
 import org.apache.zookeeper.server.quorum.QuorumPeerConfig;
 import org.apache.zookeeper.server.quorum.QuorumPeerMain;
@@ -10,6 +9,8 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.nio.file.Path;
+
+//import org.apache.zookeeper.server.admin.AdminServer;
 
 public class QuorumPeerMainWithShutdown extends QuorumPeerMain {
 
@@ -49,7 +50,8 @@ public class QuorumPeerMainWithShutdown extends QuorumPeerMain {
         }
     }
 
-    public void initializeAndRun(final String[] args) throws IOException, QuorumPeerConfig.ConfigException, AdminServer.AdminServerException {
+    //    public void initializeAndRun(final String[] args) throws IOException, QuorumPeerConfig.ConfigException, AdminServer.AdminServerException {
+    public void initializeAndRun(final String[] args) throws IOException, QuorumPeerConfig.ConfigException {
         super.initializeAndRun(args);
     }
 

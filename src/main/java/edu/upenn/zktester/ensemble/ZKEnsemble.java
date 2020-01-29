@@ -141,6 +141,13 @@ public class ZKEnsemble implements Watcher {
         }
     }
 
+    public void tearDown() throws IOException {
+        for (final var server : servers) {
+            server.tearDown();
+        }
+        LOG.info("Ensemble teardown complete");
+    }
+
     @Override
     public void process(final WatchedEvent watchedEvent) {
         // Ignore

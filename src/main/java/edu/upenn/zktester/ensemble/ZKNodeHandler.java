@@ -1,6 +1,6 @@
 package edu.upenn.zktester.ensemble;
 
-import org.apache.zookeeper.server.admin.AdminServer;
+//import org.apache.zookeeper.server.admin.AdminServer;
 import org.apache.zookeeper.server.quorum.QuorumPeerConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -17,6 +17,7 @@ public class ZKNodeHandler {
 
     private static final Logger LOG = LoggerFactory.getLogger(ZKNodeHandler.class);
 
+    private final Path tempDir;
     private final Path confFile;
     private final Path dataDir;
 
@@ -24,7 +25,7 @@ public class ZKNodeHandler {
     private Thread currentThread;
 
     public ZKNodeHandler(final int myId, final int clientPort, final String quorumCfgSection) throws IOException {
-        final Path tempDir = ZKHelper.createTempDir();
+        tempDir = ZKHelper.createTempDir();
         LOG.info("id = {} tempDir = {} clientPort = {}", myId, tempDir.toString(), clientPort);
 
         confFile = Files.createFile(Paths.get(tempDir.toString(), "zoo.cfg"));
@@ -47,7 +48,8 @@ public class ZKNodeHandler {
         currentThread = new Thread(() -> {
             try {
                 quorumPeerMain.initializeAndRun(new String[]{confFile.toString()});
-            } catch (final IOException | QuorumPeerConfig.ConfigException | AdminServer.AdminServerException e) {
+//            } catch (final IOException | QuorumPeerConfig.ConfigException | AdminServer.AdminServerException e) {
+            } catch (final IOException | QuorumPeerConfig.ConfigException e) {
                 LOG.error("Unexpected exception in currentThread", e);
                 quorumPeerMain.shutdown();
             } finally {
@@ -77,12 +79,20 @@ public class ZKNodeHandler {
         return t != null && t.isAlive();
     }
 
-    public void clean() throws IOException {
-        LOG.info("Deleting {}", quorumPeerMain.getTxnFactoryDataDir());
-        Files.walk(quorumPeerMain.getTxnFactoryDataDir())
+    private void deleteDir(final Path dir) throws IOException {
+        LOG.info("Deleting {}", dir);
+        Files.walk(dir)
                 .sorted(Comparator.reverseOrder())
                 .map(Path::toFile)
                 .forEach(File::delete);
+    }
+
+    public void clean() throws IOException {
+        deleteDir(quorumPeerMain.getTxnFactoryDataDir());
+    }
+
+    public void tearDown() throws IOException {
+        deleteDir(tempDir);
     }
 
     public boolean isLeader() {

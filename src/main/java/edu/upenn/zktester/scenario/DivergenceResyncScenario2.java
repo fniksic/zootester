@@ -30,7 +30,10 @@ public class DivergenceResyncScenario2 implements Scenario {
 
     @Override
     public void execute() throws Exception {
-        try (final AutoCloseable cleanUp = zkEnsemble::stopEnsemble) {
+        try (final AutoCloseable cleanUp = () -> {
+            zkEnsemble.stopEnsemble();
+            zkEnsemble.tearDown();
+        }) {
             zkEnsemble.startEnsemble();
 
             final int srvC = zkEnsemble.getLeader();
