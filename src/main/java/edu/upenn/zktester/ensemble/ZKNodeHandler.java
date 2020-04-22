@@ -1,6 +1,6 @@
 package edu.upenn.zktester.ensemble;
 
-//import org.apache.zookeeper.server.admin.AdminServer;
+import org.apache.zookeeper.server.admin.AdminServer;
 import org.apache.zookeeper.server.quorum.QuorumPeerConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -48,8 +48,8 @@ public class ZKNodeHandler {
         currentThread = new Thread(() -> {
             try {
                 quorumPeerMain.initializeAndRun(new String[]{confFile.toString()});
-//            } catch (final IOException | QuorumPeerConfig.ConfigException | AdminServer.AdminServerException e) {
-            } catch (final IOException | QuorumPeerConfig.ConfigException e) {
+            } catch (final IOException | QuorumPeerConfig.ConfigException | AdminServer.AdminServerException e) {
+//            } catch (final IOException | QuorumPeerConfig.ConfigException e) {
                 LOG.error("Unexpected exception in currentThread", e);
                 quorumPeerMain.shutdown();
             } finally {
