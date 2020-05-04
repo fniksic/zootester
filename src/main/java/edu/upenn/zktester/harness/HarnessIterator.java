@@ -10,7 +10,7 @@ class HarnessIterator implements Iterator<Harness> {
     private final int numKeys;
     private final int numNodes;
     private final int numPhases;
-    private List<Request> requests;
+    private final List<Request> requests;
     private List<Phase> phases;
     private boolean hasNext = true;
 
