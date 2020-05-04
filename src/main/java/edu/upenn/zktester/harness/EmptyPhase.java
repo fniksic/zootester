@@ -17,4 +17,9 @@ public class EmptyPhase implements Phase {
     public <T> T match(Function<EmptyPhase, T> caseEmpty, Function<RequestPhase, T> caseRequest) {
         return caseEmpty.apply(this);
     }
+
+    @Override
+    public String toString() {
+        return "EmptyPhase{}";
+    }
 }

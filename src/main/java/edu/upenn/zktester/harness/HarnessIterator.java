@@ -67,15 +67,17 @@ class HarnessIterator implements Iterator<Harness> {
 
     private static class Request {
         public int node;
-        public int key;
+        public int readKey;
         public int readsFrom;
+        public int writeKey;
         public RequestType type;
 
-        public Request(final RequestType type, final int node, final int key, final int readsFrom) {
+        public Request(final RequestType type, final int node, final int readKey, final int readsFrom, final int writeKey) {
             this.type = type;
             this.node = node;
-            this.key = key;
+            this.readKey = readKey;
             this.readsFrom = readsFrom;
+            this.writeKey = writeKey;
         }
     }
 
@@ -83,22 +85,23 @@ class HarnessIterator implements Iterator<Harness> {
         final List<Phase> phases = new ArrayList<>();
         for (int i = 0; i < requests.size(); ++i) {
             final Request request = requests.get(i);
-            final String key = Harness.keyMapper(request.key);
-            final int valueToWrite = 100 * (i + 1) + request.node;
+            final String writeKey = Harness.keyMapper(request.writeKey);
+            final int writeValue = 100 * (i + 1) + request.node;
             final Phase phase;
             if (RequestType.UNCONDITIONAL.equals(request.type)) {
-                phase = new UnconditionalWritePhase(request.node, key, valueToWrite);
+                phase = new UnconditionalWritePhase(request.node, writeKey, writeValue);
             } else {
-                final int valueToRead;
+                final String readKey = Harness.keyMapper(request.readKey);
+                final int readValue;
                 if (request.readsFrom >= 0) {
-                    valueToRead = phases.get(request.readsFrom).match(
+                    readValue = phases.get(request.readsFrom).match(
                             ignoreEmptyPhase -> 0,
-                            requestPhase -> requestPhase.getValueToWrite()
+                            requestPhase -> requestPhase.getWriteValue()
                     );
                 } else {
-                    valueToRead = 0;
+                    readValue = 0;
                 }
-                phase = new ConditionalWritePhase(request.node, key, valueToRead, valueToWrite);
+                phase = new ConditionalWritePhase(request.node, readKey, readValue, writeKey, writeValue);
             }
             phases.add(phase);
         }
@@ -111,7 +114,7 @@ class HarnessIterator implements Iterator<Harness> {
     private static List<Request> initialRequests(final int numRequests) {
         final List<Request> requests = new ArrayList<>();
         for (int i = 0; i < numRequests; ++i) {
-            requests.add(new Request(RequestType.UNCONDITIONAL, 0, 0, -1));
+            requests.add(new Request(RequestType.UNCONDITIONAL, 0, 0, -1, 0));
         }
         return requests;
     }
@@ -121,8 +124,9 @@ class HarnessIterator implements Iterator<Harness> {
             final Request request = requests.get(i);
             request.type = RequestType.UNCONDITIONAL;
             request.node = 0;
-            request.key = 0;
+            request.readKey = 0;
             request.readsFrom = -1;
+            request.writeKey = 0;
         }
     }
 
@@ -132,25 +136,32 @@ class HarnessIterator implements Iterator<Harness> {
             final Request request = requests.get(i);
             if (request.type.equals(RequestType.UNCONDITIONAL)) {
                 request.type = RequestType.CONDITIONAL;
-                // Reads from the initial value
+                // Reads from the initial value for key 0
+                request.readKey = 0;
                 request.readsFrom = -1;
                 break;
             } else {
-                // Is there a next requests before this one that sets the same key?
-                final int nextReadsFrom = nextReadsFrom(requests, request.readsFrom + 1, request.key);
+                // Is there a next requests before this one that sets the readKey?
+                final int nextReadsFrom = nextReadsFrom(requests, request.readsFrom + 1, i, request.readKey);
                 if (nextReadsFrom != i) {
                     request.readsFrom = nextReadsFrom;
                     break;
                 }
+                // Otherwise go to the next readKey
+                if (request.readKey + 1 < numKeys) {
+                    ++request.readKey;
+                    request.readsFrom = -1;
+                    break;
+                }
             }
-            if (request.key + 1  < numKeys) {
-                ++request.key;
+            if (request.writeKey + 1 < numKeys) {
+                ++request.writeKey;
                 request.type = RequestType.UNCONDITIONAL;
                 break;
             }
             if (request.node + 1 < numNodes) {
                 ++request.node;
-                request.key = 0;
+                request.writeKey = 0;
                 request.type = RequestType.UNCONDITIONAL;
                 break;
             }
@@ -162,8 +173,8 @@ class HarnessIterator implements Iterator<Harness> {
         return false;
     }
 
-    private static int nextReadsFrom(final List<Request> requests, int from, final int key) {
-        while (requests.get(from).key != key) {
+    private static int nextReadsFrom(final List<Request> requests, int from, final int to, final int key) {
+        while (from < to && requests.get(from).writeKey != key) {
             ++from;
         }
         return from;

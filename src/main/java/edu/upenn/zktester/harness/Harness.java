@@ -7,7 +7,6 @@ import org.apache.zookeeper.ZooDefs;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Iterator;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -43,13 +42,14 @@ public class Harness {
 
     /**
      * {@code numPhases >= numRequests}
+     *
      * @param numKeys
      * @param numNodes
      * @param numRequests
      * @param numPhases
      * @return
      */
-    public static Iterator<Harness> generate(final int numKeys, final int numNodes, final int numRequests, final int numPhases) {
+    public static HarnessIterator generate(final int numKeys, final int numNodes, final int numRequests, final int numPhases) {
         return new HarnessIterator(numKeys, numNodes, numRequests, numPhases);
     }
 

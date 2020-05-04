@@ -8,29 +8,30 @@ import java.util.Arrays;
 public class ConditionalWritePhase implements RequestPhase {
 
     private final int node;
-    private final String key;
-    private final int valueToRead;
-    private final int valueToWrite;
-    private final byte[] rawValueToRead;
-    private final byte[] rawValueToWrite;
+    private final String readKey;
+    private final int readValue;
+    private final String writeKey;
+    private final int writeValue;
+    private final byte[] rawReadValue;
+    private final byte[] rawWriteValue;
 
-    public ConditionalWritePhase(final int node, final String key, final int valueToRead, final int valueToWrite) {
+    public ConditionalWritePhase(final int node, final String readKey, final int readValue,
+                                 final String writeKey, final int writeValue) {
         this.node = node;
-        this.key = key;
-        this.valueToRead = valueToRead;
-        this.valueToWrite = valueToWrite;
-        this.rawValueToRead = Integer.toString(valueToRead).getBytes();
-        this.rawValueToWrite = Integer.toString(valueToWrite).getBytes();
+        this.readKey = readKey;
+        this.readValue = readValue;
+        this.writeKey = writeKey;
+        this.writeValue = writeValue;
+        this.rawReadValue = Integer.toString(readValue).getBytes();
+        this.rawWriteValue = Integer.toString(writeValue).getBytes();
     }
 
     @Override
     public ZKRequest getRequest() {
         return zk -> {
-            // Zookeeper doesn't provide a native compare-and-swap. We simulate one by getting the value
-            // and setting the new value only if the version hasn't changed.
-            zk.getData(key, false, (returnCode, key, ctx, result, stat) -> {
-                if (KeeperException.Code.OK.intValue() == returnCode && Arrays.equals(result, rawValueToRead)) {
-                    zk.setData(key, rawValueToWrite, stat.getVersion(), null, null);
+            zk.getData(readKey, false, (returnCode, key, ctx, result, stat) -> {
+                if (KeeperException.Code.OK.intValue() == returnCode && Arrays.equals(result, rawReadValue)) {
+                    zk.setData(writeKey, rawWriteValue, -1, null, null);
                 }
             }, null);
             Thread.sleep(500);
@@ -44,17 +45,18 @@ public class ConditionalWritePhase implements RequestPhase {
     }
 
     @Override
-    public int getValueToWrite() {
-        return valueToWrite;
+    public int getWriteValue() {
+        return writeValue;
     }
 
     @Override
     public String toString() {
         return "ConditionalWritePhase{" +
                 "node=" + node +
-                ", key='" + key + '\'' +
-                ", valueToRead=" + valueToRead +
-                ", valueToWrite=" + valueToWrite +
+                ", readKey='" + readKey + '\'' +
+                ", readValue=" + readValue +
+                ", writeKey='" + writeKey + '\'' +
+                ", valueToWrite=" + writeValue +
                 '}';
     }
 }
