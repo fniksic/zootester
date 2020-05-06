@@ -19,6 +19,14 @@ public class EmptyPhase implements Phase {
     }
 
     @Override
+    public <T> T fullMatch(final Function<EmptyPhase, T> caseEmpty,
+                           final Function<UnconditionalWritePhase, T> caseUnconditionalWrite,
+                           final Function<ConditionalWritePhase, T> caseConditionalWrite,
+                           final Function<VirtualWritePhase, T> caseVirtualWrite) {
+        return caseEmpty.apply(this);
+    }
+
+    @Override
     public String toString() {
         return "EmptyPhase{}";
     }

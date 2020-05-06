@@ -2,6 +2,8 @@ package edu.upenn.zktester.harness;
 
 import edu.upenn.zktester.ensemble.ZKRequest;
 
+import java.util.function.Function;
+
 public class UnconditionalWritePhase implements RequestPhase {
 
     private final int node;
@@ -31,8 +33,26 @@ public class UnconditionalWritePhase implements RequestPhase {
     }
 
     @Override
+    public String getWriteKey() {
+        return writeKey;
+    }
+
+    @Override
     public int getWriteValue() {
         return writeValue;
+    }
+
+    @Override
+    public boolean isWrite() {
+        return true;
+    }
+
+    @Override
+    public <T> T fullMatch(final Function<EmptyPhase, T> caseEmpty,
+                           final Function<UnconditionalWritePhase, T> caseUnconditionalWrite,
+                           final Function<ConditionalWritePhase, T> caseConditionalWrite,
+                           final Function<VirtualWritePhase, T> caseVirtualWrite) {
+        return caseUnconditionalWrite.apply(this);
     }
 
     @Override

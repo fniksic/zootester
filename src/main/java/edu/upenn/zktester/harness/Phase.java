@@ -12,4 +12,8 @@ public interface Phase {
 
     <T> T match(Function<EmptyPhase, T> caseEmpty, Function<RequestPhase, T> caseRequest);
 
+    <T> T fullMatch(Function<EmptyPhase, T> caseEmpty,
+                    Function<UnconditionalWritePhase, T> caseUnconditionalWrite,
+                    Function<ConditionalWritePhase, T> caseConditionalWrite,
+                    Function<VirtualWritePhase, T> caseVirtualWrite);
 }

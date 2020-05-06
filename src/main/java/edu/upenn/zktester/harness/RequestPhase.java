@@ -12,7 +12,11 @@ public interface RequestPhase extends Phase {
 
     int getNode();
 
+    String getWriteKey();
+
     int getWriteValue();
+
+    boolean isWrite();
 
     @Override
     default <T> T throwingMatch(ThrowingFunction<EmptyPhase, T> caseEmpty,
