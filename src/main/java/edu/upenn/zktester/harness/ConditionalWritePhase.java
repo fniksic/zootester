@@ -2,11 +2,15 @@ package edu.upenn.zktester.harness;
 
 import edu.upenn.zktester.ensemble.ZKRequest;
 import org.apache.zookeeper.KeeperException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Arrays;
 import java.util.function.Function;
 
 public class ConditionalWritePhase implements RequestPhase {
+
+    private static final Logger LOG = LoggerFactory.getLogger(ConditionalWritePhase.class);
 
     private final int node;
     private final String readKey;
@@ -32,13 +36,17 @@ public class ConditionalWritePhase implements RequestPhase {
     @Override
     public ZKRequest getRequest() {
         return zk -> {
+            LOG.info("Reading {}, expecting {}", readKey, readValue);
             zk.getData(readKey, false, (returnCode, key, ctx, result, stat) -> {
+                LOG.info("Got back {} -> {}, expected {}", readKey, new String(result), readValue);
                 if (KeeperException.Code.OK.intValue() == returnCode && Arrays.equals(result, rawReadValue)) {
+                    LOG.info("Setting {} -> {}", writeKey, writeValue);
                     zk.setData(writeKey, rawWriteValue, -1, null, null);
                 }
             }, null);
             Thread.sleep(500);
             System.gc();
+            LOG.info("Woke up!");
         };
     }
 

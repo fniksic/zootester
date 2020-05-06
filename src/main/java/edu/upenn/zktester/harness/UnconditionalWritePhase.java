@@ -1,10 +1,14 @@
 package edu.upenn.zktester.harness;
 
 import edu.upenn.zktester.ensemble.ZKRequest;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.function.Function;
 
 public class UnconditionalWritePhase implements RequestPhase {
+
+    private static final Logger LOG = LoggerFactory.getLogger(UnconditionalWritePhase.class);
 
     private final int node;
     private final String writeKey;
@@ -21,9 +25,11 @@ public class UnconditionalWritePhase implements RequestPhase {
     @Override
     public ZKRequest getRequest() {
         return zk -> {
+            LOG.info("Setting {} -> {}", writeKey, writeValue);
             zk.setData(writeKey, rawWriteValue, -1, null, null);
             Thread.sleep(500);
             System.gc();
+            LOG.info("Woke up!");
         };
     }
 
