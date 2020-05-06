@@ -15,6 +15,7 @@ public class Config {
     private int requests = 0;
     private int basePort = 11221;
     private Long seed = null;
+    private int harnesses = 1;
 
     private Config() {
     }
@@ -55,6 +56,10 @@ public class Config {
         return seed;
     }
 
+    public int getHarnesses() {
+        return harnesses;
+    }
+
     public static Config parseArgs(final String[] args) throws ConfigException {
         try {
             final Config config = new Config();
@@ -89,6 +94,10 @@ public class Config {
                         break;
                     case "--seed":
                         config.seed = Long.parseLong(args[++i]);
+                        break;
+                    case "--harnesses":
+                    case "-h":
+                        config.harnesses = Integer.parseInt(args[++i]);
                         break;
                     default:
                         throw new Exception("Unrecognized argument " + args[i]);

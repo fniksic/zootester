@@ -1,23 +1,22 @@
 package edu.upenn.zktester.scenario;
 
-import edu.upenn.zktester.ensemble.ConsistentValues;
 import edu.upenn.zktester.ensemble.ZKEnsemble;
-import edu.upenn.zktester.ensemble.ZKProperty;
 import edu.upenn.zktester.fault.ExactFaultGenerator;
 import edu.upenn.zktester.fault.FaultGenerator;
+import edu.upenn.zktester.harness.EmptyPhase;
+import edu.upenn.zktester.harness.Harness;
+import edu.upenn.zktester.harness.Phase;
+import edu.upenn.zktester.harness.UnconditionalWritePhase;
 import edu.upenn.zktester.subset.MinimalQuorumGenerator;
 import edu.upenn.zktester.subset.RandomSubsetGenerator;
 import edu.upenn.zktester.util.Assert;
 import edu.upenn.zktester.util.AssertionFailureError;
 import edu.upenn.zktester.util.Config;
-import org.apache.zookeeper.CreateMode;
-import org.apache.zookeeper.ZooDefs.Ids;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.util.List;
-import java.util.Random;
+import java.util.*;
 import java.util.stream.Collectors;
 
 public class RandomScenario implements Scenario {
@@ -26,16 +25,30 @@ public class RandomScenario implements Scenario {
 
     private static final int TOTAL_SERVERS = 3;
     private static final int QUORUM_SIZE = 2;
-    private static final List<String> KEYS = List.of("/key0", "/key1");
-    private static final ZKProperty CONSISTENT_VALUES = new ConsistentValues(KEYS);
 
     private final Random random = new Random();
     private final ZKEnsemble zkEnsemble = new ZKEnsemble(TOTAL_SERVERS);
+    private final Harness harness;
 
     private Config config;
     private MinimalQuorumGenerator quorumGenerator;
     private RandomSubsetGenerator subsetGenerator;
     private FaultGenerator faultGenerator;
+
+    public RandomScenario(final Harness harness) {
+        this.harness = harness;
+    }
+
+    public RandomScenario() {
+        // TODO: Not ideal. In this scenario it is really desirable to issue requests
+        //       to nodes that are running. The probability that node 2 is running in
+        //       both write phases if there is 1 additional fault is 8/27 = 29%
+        this(new Harness(List.of(
+                new UnconditionalWritePhase(2, "/key0", 102),
+                new EmptyPhase(),
+                new UnconditionalWritePhase(2, "/key1", 302)
+        ), 2));
+    }
 
     @Override
     public void init(final Config config) throws IOException {
@@ -87,15 +100,14 @@ public class RandomScenario implements Scenario {
 
             // We have an initial phase in which we create the znodes
             final int leader = zkEnsemble.getLeader();
-            zkEnsemble.handleRequest(leader, zk -> {
-                for (final var key : KEYS) {
-                    zk.create(key, Integer.toString(leader).getBytes(), Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
-                    LOG.info("Initial association: {} -> {}", key, leader);
-                }
-            });
+            zkEnsemble.handleRequest(leader, harness.getInitRequest());
             zkEnsemble.stopAllServers();
 
-            for (int phase = 1; phase <= config.getPhases(); ++phase) {
+            final Set<Integer> executedPhases = new HashSet<>();
+            final ListIterator<Phase> it = harness.getPhases().listIterator();
+            while (it.hasNext()) {
+                final int phaseIndex = it.nextIndex();
+                final Phase phase = it.next();
                 final List<Integer> serversToStart = quorumGenerator.generate();
                 zkEnsemble.startServers(serversToStart);
 
@@ -103,33 +115,27 @@ public class RandomScenario implements Scenario {
                 final List<Integer> serversToCrash = subsetGenerator.generate(serversToStart.size(), faults).stream()
                         .map(i -> serversToStart.get(i)).collect(Collectors.toList());
                 zkEnsemble.crashServers(serversToCrash);
+                final List<Integer> serversStillRunning = serversToStart.stream()
+                        .filter(i -> !serversToCrash.contains(i)).collect(Collectors.toList());
 
-                // Make a client request in phases 1 and 3
-                if (phase == 1 || phase == 3) {
-                    // In this scenario the client to make request to is chosen at random among the nodes
-                    // that are up.
-                    final List<Integer> serversStillRunning = serversToStart.stream()
-                            .filter(i -> !serversToCrash.contains(i)).collect(Collectors.toList());
-                    final int id = serversStillRunning.get(random.nextInt(serversStillRunning.size()));
-
-                    // We want to make requests on different keys in the two phases
-                    final String key = KEYS.get(phase / 2);
-                    final int value = 100 * phase + id;
-                    final byte[] rawValue = Integer.toString(value).getBytes();
-                    LOG.info("Initiating request to {}: set {} -> {}", id, key, value);
-                    zkEnsemble.handleRequest(id, zk -> {
-                        zk.setData(key, rawValue, -1, null, null);
-                        Thread.sleep(500);
-                        System.gc();
-                    });
-                }
-
+                phase.throwingMatch(
+                        empty -> null,
+                        request -> {
+                            if (serversStillRunning.contains(request.getNode())) {
+                                LOG.info("Initiating request for {}", request);
+                                zkEnsemble.handleRequest(request.getNode(), request.getRequest());
+                                executedPhases.add(phaseIndex);
+                            }
+                            return null;
+                        }
+                );
                 zkEnsemble.stopServers(serversToStart);
             }
 
             zkEnsemble.startAllServers();
-            final boolean result = zkEnsemble.checkProperty(CONSISTENT_VALUES);
-            Assert.assertTrue("All keys on all servers should have the same value", result);
+            final boolean result = zkEnsemble.checkProperty(harness.getConsistencyProperty(executedPhases));
+            Assert.assertTrue("All servers should be in the same state" +
+                    ", and the state should be allowed under sequential consistency", result);
         }
     }
 }

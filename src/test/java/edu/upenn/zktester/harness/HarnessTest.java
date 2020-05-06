@@ -28,7 +28,7 @@ public class HarnessTest {
     }
 
     @Test
-    public void testPossibleStatesComplex() {
+    public void testPossibleStatesComplex_1() {
         final Harness harness = new Harness(List.of(
                 new UnconditionalWritePhase(0, "/key0", 10),
                 new UnconditionalWritePhase(1, "/key1", 11),
@@ -41,5 +41,21 @@ public class HarnessTest {
                 Map.of("/key0", 20, "/key1", 21)
         );
         assertEquals(expected, harness.getPossibleStates(Set.of(0, 1, 2, 3)));
+    }
+
+    @Test
+    public void testPossibleStatesComplex_2() {
+        final Harness harness = new Harness(List.of(
+                new ConditionalWritePhase(2, "/key1", 0, "/key0", 102),
+                new ConditionalWritePhase(1, "/key0", 0, "/key1", 201),
+                new EmptyPhase()
+        ), 2);
+        final Set<Map<String, Integer>> expected = Set.of(
+                Map.of("/key0", 0, "/key1", 201),
+                Map.of("/key0", 102, "/key1", 0),
+                Map.of("/key0", 102, "/key1", 201)
+        );
+        assertEquals(expected, harness.getPossibleStates(Set.of(0, 1)));
+        assertEquals(Set.of(Map.of("/key0", 0, "/key1", 201)), harness.getPossibleStates(Set.of(1)));
     }
 }

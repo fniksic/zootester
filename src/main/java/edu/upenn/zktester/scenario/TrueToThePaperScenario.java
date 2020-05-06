@@ -1,7 +1,7 @@
 package edu.upenn.zktester.scenario;
 
 import edu.upenn.zktester.ensemble.ZKEnsemble;
-import edu.upenn.zktester.fault.AtMostFaultGenerator;
+import edu.upenn.zktester.fault.ExactFaultGenerator;
 import edu.upenn.zktester.fault.FaultGenerator;
 import edu.upenn.zktester.harness.EmptyPhase;
 import edu.upenn.zktester.harness.Harness;
@@ -28,11 +28,23 @@ public class TrueToThePaperScenario implements Scenario {
 
     private final Random random = new Random();
     private final ZKEnsemble zkEnsemble = new ZKEnsemble(TOTAL_SERVERS);
+    private final Harness harness;
 
     private Config config;
     private RandomSubsetGenerator subsetGenerator;
     private FaultGenerator faultGenerator;
-    private Harness harness;
+
+    public TrueToThePaperScenario(final Harness harness) {
+        this.harness = harness;
+    }
+
+    public TrueToThePaperScenario() {
+        this(new Harness(List.of(
+                new UnconditionalWritePhase(2, "/key0", 102),
+                new EmptyPhase(),
+                new UnconditionalWritePhase(2, "/key1", 302)
+        ), 2));
+    }
 
     @Override
     public void init(Config config) throws IOException {
@@ -40,14 +52,7 @@ public class TrueToThePaperScenario implements Scenario {
         this.subsetGenerator = new RandomSubsetGenerator(random);
 
         // In this scenario we allow all nodes to be crashed in a phase
-        this.faultGenerator = new AtMostFaultGenerator(config.getPhases(), TOTAL_SERVERS, config.getFaults(), random);
-
-        // We have a fixed harness in this scenario
-        this.harness = new Harness(List.of(
-                new UnconditionalWritePhase(2, "/key0", 102),
-                new EmptyPhase(),
-                new UnconditionalWritePhase(2, "/key1", 302)
-        ), 2);
+        this.faultGenerator = new ExactFaultGenerator(config.getPhases(), TOTAL_SERVERS, config.getFaults(), random);
 
         zkEnsemble.init();
     }

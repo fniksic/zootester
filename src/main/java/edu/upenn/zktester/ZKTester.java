@@ -17,7 +17,7 @@ public class ZKTester {
             final Config config = Config.parseArgs(args);
             ZKHelper.setBasePort(config.getBasePort());
             final Scenario scenario;
-            if (config.getThreads() > 1) {
+            if (config.getThreads() > 1 && !config.getScenario().equals("harness")) {
                 scenario = new ParallelScenario(config);
             } else {
                 switch (config.getScenario()) {
@@ -32,6 +32,9 @@ public class ZKTester {
                         break;
                     case "paper":
                         scenario = new TrueToThePaperScenario();
+                        break;
+                    case "harness":
+                        scenario = new RandomHarnessScenario();
                         break;
                     default:
                         LOG.error("Unknown scenario!");

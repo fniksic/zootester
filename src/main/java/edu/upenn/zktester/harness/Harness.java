@@ -9,6 +9,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -19,7 +20,7 @@ public class Harness {
     private final List<Phase> phases;
     private final List<String> keys;
 
-    private final Map<Set<Integer>, Set<Map<String, Integer>>> possibleStatesMap = new HashMap<>();
+    private final Map<Set<Integer>, Set<Map<String, Integer>>> possibleStatesMap = new ConcurrentHashMap<>();
 
     public Harness(final List<Phase> phases, final int numKeys) {
         this.phases = phases;
@@ -54,8 +55,6 @@ public class Harness {
         return possibleStatesMap.get(executedPhases);
     }
 
-    private static final Comparator<RequestPhase> INCREASING_NODES = Comparator.comparingInt(RequestPhase::getNode);
-
     private Map<String, Integer> initialState() {
         return keys.stream().collect(Collectors.toMap(key -> key, key -> 0));
     }
@@ -65,63 +64,38 @@ public class Harness {
         final List<Map<String, Integer>> states =
                 new ArrayList<>(Collections.nCopies(expandedPhases.size() + 1, initialState()));
         final Set<Map<String, Integer>> possibleStates = new HashSet<>();
-
-        expandedPhases.sort(INCREASING_NODES);
-        recomputeStates(states, expandedPhases, 0);
-        possibleStates.add(states.get(states.size() - 1));
-
-        while (true) {
-            // Find a conflicting pair
-            boolean found = false;
-            int i = 0, j;
-            for (j = expandedPhases.size() - 1; j > 0; --j) {
-                final RequestPhase snd = expandedPhases.get(j);
-                for (i = j - 1; i >= 0; --i) {
-                    final RequestPhase fst = expandedPhases.get(i);
-                    if (fst.getNode() == snd.getNode()) {
-                        // We cannot swap phases with the same node
-                        break;
-                    }
-                    final boolean inConflict = inConflict(fst, snd);
-                    if (fst.getNode() > snd.getNode() && inConflict) {
-                        // We don't want to re-explore reversals we've already explored.
-                        break;
-                    } else if (inConflict) {
-                        found = true;
-                        break;
-                    }
-                }
-                if (found) {
-                    break;
-                }
-            }
-            if (!found) {
-                // No more conflicts, we're done
-                break;
-            }
-
-            // Reverse the order of the conflicted requests
-            reversePair(expandedPhases, i, j);
-            recomputeStates(states, expandedPhases, i);
-            possibleStates.add(states.get(states.size() - 1));
-        }
+        recurse(new ArrayList<>(), new HashSet<>(), expandedPhases, states, 0, possibleStates);
         possibleStatesMap.put(executedPhases, possibleStates);
     }
 
-    private static boolean inConflict(final RequestPhase fst, final RequestPhase snd) {
-        final String fstKey = fst.fullMatch(
-                empty -> "",
-                UnconditionalWritePhase::getWriteKey,
-                ConditionalWritePhase::getReadKey,
-                VirtualWritePhase::getWriteKey
-        );
-        final String sndKey = snd.fullMatch(
-                empty -> "",
-                UnconditionalWritePhase::getWriteKey,
-                ConditionalWritePhase::getReadKey,
-                VirtualWritePhase::getWriteKey
-        );
-        return (fst.isWrite() || snd.isWrite()) && fstKey.equals(sndKey);
+    private void recurse(final List<Integer> positions,
+                         final Set<Integer> setOfPositions,
+                         final List<RequestPhase> expandedPhases,
+                         final List<Map<String, Integer>> states,
+                         final int from,
+                         final Set<Map<String, Integer>> possibleStates) {
+        if (positions.size() == expandedPhases.size()) {
+            recomputeStates(positions, states, expandedPhases, from);
+            possibleStates.add(states.get(states.size() - 1));
+            return;
+        }
+        final Set<Integer> nodes = new HashSet<>();
+        int nextFrom = from;
+        for (int i = 0; i < expandedPhases.size(); ++i) {
+            final RequestPhase phase = expandedPhases.get(i);
+            if (setOfPositions.contains(i) || nodes.contains(phase.getNode())) {
+                continue;
+            }
+            nodes.add(phase.getNode());
+            positions.add(i);
+            setOfPositions.add(i);
+
+            recurse(positions, setOfPositions, expandedPhases, states, nextFrom, possibleStates);
+
+            positions.remove(positions.size() - 1);
+            setOfPositions.remove(i);
+            nextFrom = positions.size();
+        }
     }
 
     private List<RequestPhase> constructExpandedPhases(final Set<Integer> executedPhases) {
@@ -146,24 +120,14 @@ public class Harness {
         return expandedPhases;
     }
 
-    private static void reversePair(final List<RequestPhase> expandedPhases, final int i, final int j) {
-        final RequestPhase fst = expandedPhases.get(i);
-        expandedPhases.set(i, expandedPhases.get(j));
-        for (int k = j; k > i + 1; --k) {
-            expandedPhases.set(k, expandedPhases.get(k - 1));
-        }
-        expandedPhases.set(i + 1, fst);
-        if (i + 3 < expandedPhases.size()) {
-            expandedPhases.subList(i + 2, expandedPhases.size()).sort(INCREASING_NODES);
-        }
-    }
-
-    private static void recomputeStates(final List<Map<String, Integer>> states,
+    private static void recomputeStates(final List<Integer> positions,
+                                        final List<Map<String, Integer>> states,
                                         final List<RequestPhase> expandedPhases,
                                         int from) {
-        for (final var phase : expandedPhases.subList(from, expandedPhases.size())) {
+        for (final var i : positions.subList(from, positions.size())) {
             final Map<String, Integer> state = states.get(from);
             final Map<String, Integer> newState = new HashMap<>(state);
+            final RequestPhase phase = expandedPhases.get(i);
             phase.fullMatch(
                     empty -> null,
                     unconditionalWrite -> {
@@ -203,5 +167,12 @@ public class Harness {
 
     public static String keyMapper(final int key) {
         return "/key" + key;
+    }
+
+    @Override
+    public String toString() {
+        return "Harness{" +
+                "phases=" + phases +
+                '}';
     }
 }
