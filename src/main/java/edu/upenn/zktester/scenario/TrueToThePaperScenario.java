@@ -1,12 +1,11 @@
 package edu.upenn.zktester.scenario;
 
-import edu.upenn.zktester.ensemble.ConsistentValues;
 import edu.upenn.zktester.ensemble.ZKEnsemble;
-import edu.upenn.zktester.ensemble.ZKProperty;
 import edu.upenn.zktester.fault.AtMostFaultGenerator;
 import edu.upenn.zktester.fault.FaultGenerator;
 import edu.upenn.zktester.harness.EmptyPhase;
 import edu.upenn.zktester.harness.Harness;
+import edu.upenn.zktester.harness.Phase;
 import edu.upenn.zktester.harness.UnconditionalWritePhase;
 import edu.upenn.zktester.subset.RandomSubsetGenerator;
 import edu.upenn.zktester.util.Assert;
@@ -16,9 +15,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.util.Collections;
-import java.util.List;
-import java.util.Random;
+import java.util.*;
 import java.util.stream.Collectors;
 
 public class TrueToThePaperScenario implements Scenario {
@@ -28,8 +25,6 @@ public class TrueToThePaperScenario implements Scenario {
     private static final int TOTAL_SERVERS = 3;
     private static final int QUORUM = 2;
     private static final List<Integer> ALL_SERVERS = List.of(0, 1, 2);
-    private static final List<String> KEYS = List.of("/key0", "/key1");
-    private static final ZKProperty CONSISTENT_VALUES = new ConsistentValues(KEYS);
 
     private final Random random = new Random();
     private final ZKEnsemble zkEnsemble = new ZKEnsemble(TOTAL_SERVERS);
@@ -100,7 +95,11 @@ public class TrueToThePaperScenario implements Scenario {
             zkEnsemble.handleRequest(leader, harness.getInitRequest());
             zkEnsemble.stopAllServers();
 
-            for (final var phase : harness.getPhases()) {
+            final Set<Integer> executedPhases = new HashSet<>();
+            final ListIterator<Phase> it = harness.getPhases().listIterator();
+            while (it.hasNext()) {
+                final int phaseIndex = it.nextIndex();
+                final Phase phase = it.next();
                 final int faults = faultGenerator.generate();
                 final List<Integer> serversToCrash = subsetGenerator.generate(TOTAL_SERVERS, faults);
                 final List<Integer> serversToStop = phase.throwingMatch(
@@ -133,6 +132,7 @@ public class TrueToThePaperScenario implements Scenario {
                             if (!serversToCrash.contains(requestPhase.getNode())) {
                                 LOG.info("Initiating request for {}", requestPhase);
                                 zkEnsemble.handleRequest(requestPhase.getNode(), requestPhase.getRequest());
+                                executedPhases.add(phaseIndex);
                             }
                             return serversToStart;
                         }
@@ -141,8 +141,9 @@ public class TrueToThePaperScenario implements Scenario {
             }
 
             zkEnsemble.startAllServers();
-            final boolean result = zkEnsemble.checkProperty(CONSISTENT_VALUES);
-            Assert.assertTrue("All keys on all servers should have the same value", result);
+            final boolean result = zkEnsemble.checkProperty(harness.getConsistencyProperty(executedPhases));
+            Assert.assertTrue("All servers should be in the same state" +
+                    ", and the state should be allowed under sequential consistency", result);
         }
     }
 }

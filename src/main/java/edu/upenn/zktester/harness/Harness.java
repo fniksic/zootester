@@ -1,5 +1,6 @@
 package edu.upenn.zktester.harness;
 
+import edu.upenn.zktester.ensemble.ZKProperty;
 import edu.upenn.zktester.ensemble.ZKRequest;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.Op;
@@ -40,6 +41,10 @@ public class Harness {
 
     public List<Phase> getPhases() {
         return phases;
+    }
+
+    public ZKProperty getConsistencyProperty(final Set<Integer> executedPhases) {
+        return new SequentialConsistency(keys, getPossibleStates(executedPhases));
     }
 
     public Set<Map<String, Integer>> getPossibleStates(final Set<Integer> executedPhases) {
