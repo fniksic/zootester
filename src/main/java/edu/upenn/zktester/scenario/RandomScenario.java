@@ -1,6 +1,7 @@
 package edu.upenn.zktester.scenario;
 
 import edu.upenn.zktester.ensemble.ZKEnsemble;
+import edu.upenn.zktester.ensemble.ZKProperty;
 import edu.upenn.zktester.fault.ExactFaultGenerator;
 import edu.upenn.zktester.fault.FaultGenerator;
 import edu.upenn.zktester.harness.EmptyPhase;
@@ -16,7 +17,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.util.*;
+import java.util.List;
+import java.util.ListIterator;
+import java.util.Map;
+import java.util.Random;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 public class RandomScenario implements Scenario {
@@ -103,7 +108,8 @@ public class RandomScenario implements Scenario {
             zkEnsemble.handleRequest(leader, harness.getInitRequest());
             zkEnsemble.stopAllServers();
 
-            final Set<Integer> executedPhases = new HashSet<>();
+            final Map<Integer, Boolean> executedPhases = new ConcurrentHashMap<>();
+            final Map<Integer, Boolean> maybeExecutedPhases = new ConcurrentHashMap<>();
             final ListIterator<Phase> it = harness.getPhases().listIterator();
             while (it.hasNext()) {
                 final int phaseIndex = it.nextIndex();
@@ -113,7 +119,7 @@ public class RandomScenario implements Scenario {
 
                 final int faults = faultGenerator.generate();
                 final List<Integer> serversToCrash = subsetGenerator.generate(serversToStart.size(), faults).stream()
-                        .map(i -> serversToStart.get(i)).collect(Collectors.toList());
+                        .map(serversToStart::get).collect(Collectors.toList());
                 zkEnsemble.crashServers(serversToCrash);
                 final List<Integer> serversStillRunning = serversToStart.stream()
                         .filter(i -> !serversToCrash.contains(i)).collect(Collectors.toList());
@@ -123,8 +129,18 @@ public class RandomScenario implements Scenario {
                         request -> {
                             if (serversStillRunning.contains(request.getNode())) {
                                 LOG.info("Initiating request for {}", request);
-                                zkEnsemble.handleRequest(request.getNode(), request.getRequest());
-                                executedPhases.add(phaseIndex);
+                                zkEnsemble.handleRequest(request.getNode(), request.getRequest(
+                                        // If successful, add to the map of executed phases
+                                        () -> {
+                                            LOG.info("Phase {} request completed", phaseIndex);
+                                            executedPhases.put(phaseIndex, true);
+                                        },
+                                        // On undetermined result, add to the map of maybe executed phases
+                                        () -> {
+                                            LOG.info("Phase {} request undetermined", phaseIndex);
+                                            maybeExecutedPhases.put(phaseIndex, true);
+                                        }
+                                ));
                             }
                             return null;
                         }
@@ -133,7 +149,9 @@ public class RandomScenario implements Scenario {
             }
 
             zkEnsemble.startAllServers();
-            final boolean result = zkEnsemble.checkProperty(harness.getConsistencyProperty(executedPhases));
+            final ZKProperty property =
+                    harness.getConsistencyProperty(executedPhases.keySet(), maybeExecutedPhases.keySet());
+            final boolean result = zkEnsemble.checkProperty(property);
             Assert.assertTrue("All servers should be in the same state" +
                     ", and the state should be allowed under sequential consistency", result);
         }

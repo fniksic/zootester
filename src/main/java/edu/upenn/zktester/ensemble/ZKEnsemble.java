@@ -34,7 +34,8 @@ public class ZKEnsemble implements Watcher {
         final StringBuilder sb = new StringBuilder();
         for (int i = 0; i < totalNodes; ++i) {
             clientPorts.add(ZKHelper.getUniquePort());
-            sb.append("server." + i + "=127.0.0.1:" + ZKHelper.getUniquePort() + ":" + ZKHelper.getUniquePort() + "\n");
+            sb.append("server.").append(i).append("=127.0.0.1:").append(ZKHelper.getUniquePort())
+                    .append(':').append(ZKHelper.getUniquePort()).append('\n');
         }
         final String quorumCfgSection = sb.toString();
 
@@ -110,7 +111,7 @@ public class ZKEnsemble implements Watcher {
         while (notAllInState && iterations-- > 0) {
             Thread.sleep(100);
             notAllInState = clientIds.stream()
-                    .map(i -> clients.get(i))
+                    .map(clients::get)
                     .anyMatch(zk -> zk.getState() != state);
         }
         if (notAllInState) {
@@ -127,7 +128,7 @@ public class ZKEnsemble implements Watcher {
     }
 
     public boolean checkProperty(final ZKProperty property) throws KeeperException, InterruptedException {
-        return property.test(clients.stream().collect(Collectors.toList()));
+        return property.test(clients);
     }
 
     public void stopEnsemble() throws InterruptedException, IOException {

@@ -51,5 +51,6 @@ public class ZKTester {
         } catch (final Exception e) {
             LOG.error("Exception failure", e);
         }
+        System.exit(0);
     }
 }

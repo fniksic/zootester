@@ -34,18 +34,31 @@ public class ConditionalWritePhase implements RequestPhase {
     }
 
     @Override
-    public ZKRequest getRequest() {
+    public ZKRequest getRequest(final Runnable onSuccess, final Runnable onUnknown) {
         return zk -> {
             LOG.info("Reading {}, expecting {}", readKey, readValue);
-            zk.getData(readKey, false, (returnCode, key, ctx, result, stat) -> {
-                LOG.info("Got back {} -> {}, expected {}", readKey, new String(result), readValue);
-                if (KeeperException.Code.OK.intValue() == returnCode && Arrays.equals(result, rawReadValue)) {
-                    LOG.info("Setting {} -> {}", writeKey, writeValue);
-                    zk.setData(writeKey, rawWriteValue, -1, null, null);
+            zk.getData(readKey, false, (gReturnCode, gKey, gCtx, gResult, gStat) -> {
+                if (KeeperException.Code.OK.intValue() == gReturnCode) {
+                    LOG.info("Got back {} -> {}, expected {}", readKey, new String(gResult), readValue);
+                    if (Arrays.equals(gResult, rawReadValue)) {
+                        LOG.info("Setting {} -> {}", writeKey, writeValue);
+                        zk.setData(writeKey, rawWriteValue, -1, (sReturnCode, sKey, sCtx, sStat) -> {
+                            if (KeeperException.Code.OK.intValue() == sReturnCode) {
+                                onSuccess.run();
+                            } else {
+                                LOG.warn("zk.setData() returned {}", KeeperException.Code.get(sReturnCode));
+                                onUnknown.run();
+                            }
+                        }, null);
+                    } else {
+                        onSuccess.run();
+                    }
+                } else {
+                    LOG.warn("zk.getData() returned {}. Treating as non-executed.", KeeperException.Code.get(gReturnCode));
                 }
             }, null);
-            Thread.sleep(500);
-            System.gc();
+            Thread.sleep(100);
+//            System.gc();
             LOG.info("Woke up!");
         };
     }

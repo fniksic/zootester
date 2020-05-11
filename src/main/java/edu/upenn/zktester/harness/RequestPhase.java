@@ -8,7 +8,7 @@ import java.util.function.Function;
 
 public interface RequestPhase extends Phase {
 
-    ZKRequest getRequest();
+    ZKRequest getRequest(Runnable onSuccess, Runnable onUnknown);
 
     int getNode();
 

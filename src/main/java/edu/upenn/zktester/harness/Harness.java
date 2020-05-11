@@ -44,15 +44,32 @@ public class Harness {
         return phases;
     }
 
-    public ZKProperty getConsistencyProperty(final Set<Integer> executedPhases) {
-        return new SequentialConsistency(keys, getPossibleStates(executedPhases));
+    public ZKProperty getConsistencyProperty(final Set<Integer> executedPhases,
+                                             final Set<Integer> maybeExecutedPhases) {
+        return new SequentialConsistency(keys, getPossibleStates(executedPhases, maybeExecutedPhases));
     }
 
-    public Set<Map<String, Integer>> getPossibleStates(final Set<Integer> executedPhases) {
-        if (!possibleStatesMap.containsKey(executedPhases)) {
-            computePossibleStates(executedPhases);
+    public Set<Map<String, Integer>> getPossibleStates(final Set<Integer> executedPhases,
+                                                       final Set<Integer> maybeExecutedPhases) {
+        final List<Integer> maybeList = new ArrayList<>(maybeExecutedPhases);
+        final Set<Map<String, Integer>> result = new HashSet<>();
+
+        // Note: This assumes there are at most 31 elements in maybeExecutedPhases.
+        //       Either way, it won't work unless there are very few such elements.
+        for (int subset = 0; subset < (1 << maybeList.size()); ++subset) {
+            final Set<Integer> phases = new HashSet<>(executedPhases);
+            for (int i = 0; i < maybeList.size(); ++i) {
+                if ((subset & (1 << i)) != 0) {
+                    phases.add(maybeList.get(i));
+                }
+            }
+            if (!possibleStatesMap.containsKey(phases)) {
+                computePossibleStates(phases);
+            }
+            result.addAll(possibleStatesMap.get(phases));
         }
-        return possibleStatesMap.get(executedPhases);
+
+        return result;
     }
 
     private Map<String, Integer> initialState() {

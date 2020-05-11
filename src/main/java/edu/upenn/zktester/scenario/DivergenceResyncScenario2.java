@@ -58,7 +58,7 @@ public class DivergenceResyncScenario2 implements Scenario {
             zkEnsemble.handleRequest(srvB, zk -> {
                 zk.setData(KEYS.get(0), "1000".getBytes(), -1, null, null);
                 Thread.sleep(500);
-                System.gc();
+//                System.gc();
             });
             zkEnsemble.stopServers(List.of(srvA, srvB));
 
@@ -75,7 +75,7 @@ public class DivergenceResyncScenario2 implements Scenario {
             zkEnsemble.handleRequest(srvA, zk -> {
                 zk.setData(KEYS.get(1), "1001".getBytes(), -1, null, null);
                 Thread.sleep(500);
-                System.gc();
+//                System.gc();
             });
             zkEnsemble.stopServers(List.of(srvA, srvC));
 

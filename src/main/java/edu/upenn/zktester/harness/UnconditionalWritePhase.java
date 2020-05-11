@@ -1,6 +1,7 @@
 package edu.upenn.zktester.harness;
 
 import edu.upenn.zktester.ensemble.ZKRequest;
+import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -23,12 +24,19 @@ public class UnconditionalWritePhase implements RequestPhase {
     }
 
     @Override
-    public ZKRequest getRequest() {
+    public ZKRequest getRequest(final Runnable onSuccess, final Runnable onUnknown) {
         return zk -> {
             LOG.info("Setting {} -> {}", writeKey, writeValue);
-            zk.setData(writeKey, rawWriteValue, -1, null, null);
-            Thread.sleep(500);
-            System.gc();
+            zk.setData(writeKey, rawWriteValue, -1, (sReturnCode, sKey, sCtx, sStat) -> {
+                if (KeeperException.Code.OK.intValue() == sReturnCode) {
+                    onSuccess.run();
+                } else {
+                    LOG.warn("zk.setData() returned {}", KeeperException.Code.get(sReturnCode));
+                    onUnknown.run();
+                }
+            }, null);
+            Thread.sleep(100);
+//            System.gc();
             LOG.info("Woke up!");
         };
     }
