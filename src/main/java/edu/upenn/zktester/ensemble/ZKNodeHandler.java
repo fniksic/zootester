@@ -17,6 +17,7 @@ public class ZKNodeHandler {
 
     private static final Logger LOG = LoggerFactory.getLogger(ZKNodeHandler.class);
 
+    private final int myId;
     private final Path tempDir;
     private final Path confFile;
     private final Path dataDir;
@@ -25,6 +26,7 @@ public class ZKNodeHandler {
     private Thread currentThread;
 
     public ZKNodeHandler(final int myId, final int clientPort, final String quorumCfgSection) throws IOException {
+        this.myId = myId;
         tempDir = ZKHelper.createTempDir();
         LOG.info("id = {} tempDir = {} clientPort = {}", myId, tempDir.toString(), clientPort);
 
@@ -44,6 +46,7 @@ public class ZKNodeHandler {
     }
 
     public void start() {
+        LOG.debug("Starting new QuorumPeerMain with id={}", myId);
         quorumPeerMain = new QuorumPeerMainWithShutdown();
         currentThread = new Thread(() -> {
             try {
@@ -60,17 +63,14 @@ public class ZKNodeHandler {
     }
 
     public void shutdown() throws InterruptedException {
+        LOG.debug("Shutting down QuorumPeerMain with id={}", myId);
         final Thread t = currentThread;
         if (t != null && t.isAlive()) {
             quorumPeerMain.shutdown();
             t.join(500);
-        }
-    }
-
-    public void join(final long timeout) throws InterruptedException {
-        final Thread t = currentThread;
-        if (t != null) {
-            t.join(timeout);
+            if (t.isAlive()) {
+                LOG.error("Failed to join QuorumPeerMain's thread after 500 ms");
+            }
         }
     }
 

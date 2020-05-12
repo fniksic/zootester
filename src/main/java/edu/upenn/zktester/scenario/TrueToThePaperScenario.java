@@ -4,7 +4,10 @@ import edu.upenn.zktester.ensemble.ZKEnsemble;
 import edu.upenn.zktester.ensemble.ZKProperty;
 import edu.upenn.zktester.fault.ExactFaultGenerator;
 import edu.upenn.zktester.fault.FaultGenerator;
-import edu.upenn.zktester.harness.*;
+import edu.upenn.zktester.harness.ConditionalWritePhase;
+import edu.upenn.zktester.harness.EmptyPhase;
+import edu.upenn.zktester.harness.Harness;
+import edu.upenn.zktester.harness.Phase;
 import edu.upenn.zktester.subset.RandomSubsetGenerator;
 import edu.upenn.zktester.util.Assert;
 import edu.upenn.zktester.util.AssertionFailureError;
@@ -39,9 +42,9 @@ public class TrueToThePaperScenario implements Scenario {
 
     public TrueToThePaperScenario() {
         this(new Harness(List.of(
-                new UnconditionalWritePhase(2, "/key0", 102),
-                new EmptyPhase(),
-                new ConditionalWritePhase(2, "/key0", 102, "/key1", 302)
+                new ConditionalWritePhase(0, "/key0", 0, "/key1", 100),
+                new ConditionalWritePhase(2, "/key1", 0, "/key1", 202),
+                new EmptyPhase()
         ), 2));
     }
 

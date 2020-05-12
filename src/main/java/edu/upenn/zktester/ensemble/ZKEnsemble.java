@@ -11,6 +11,7 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -108,13 +109,21 @@ public class ZKEnsemble implements Watcher {
 
         int iterations = 100;
         boolean notAllInState = true;
+        ZooKeeper singleZkNotInState = null;
         while (notAllInState && iterations-- > 0) {
             Thread.sleep(100);
-            notAllInState = clientIds.stream()
+            final Optional<ZooKeeper> optionalZookeeper = clientIds.stream()
                     .map(clients::get)
-                    .anyMatch(zk -> zk.getState() != state);
+                    .filter(zk -> zk.getState() != state)
+                    .findAny();
+            notAllInState = optionalZookeeper.isPresent();
+            if (notAllInState) {
+                singleZkNotInState = optionalZookeeper.get();
+            }
         }
         if (notAllInState) {
+            LOG.error("Waited for 10 s for all ZK clients to get to state {}; at least one still in state {}",
+                    state, singleZkNotInState.getState());
             throw new RuntimeException("Waiting too long in waitForAll");
         }
     }
