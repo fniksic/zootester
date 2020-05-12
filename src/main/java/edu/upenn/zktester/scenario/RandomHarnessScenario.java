@@ -1,5 +1,6 @@
 package edu.upenn.zktester.scenario;
 
+import edu.upenn.zktester.ensemble.ZKHelper;
 import edu.upenn.zktester.harness.Harness;
 import edu.upenn.zktester.harness.RandomHarnessGenerator;
 import edu.upenn.zktester.util.Config;
@@ -35,10 +36,13 @@ public class RandomHarnessScenario implements Scenario {
     }
 
     @Override
-    public void execute() throws Exception {
+    public void execute() {
         for (int i = 0; i < config.getHarnesses(); ++i) {
             final Harness harness = harnessGenerator.next();
             LOG.info("Starting execution with {}", harness.toString());
+
+            // Reset unique port counter to reuse the port numbers over executions
+            ZKHelper.setBasePort(config.getBasePort());
 
             final List<Thread> threads = new ArrayList<>();
             for (int j = 0; j < config.getThreads(); ++j) {
