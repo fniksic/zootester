@@ -1,8 +1,8 @@
 package edu.upenn.zktester.scenario;
 
-import edu.upenn.zktester.ensemble.ConsistentValues;
 import edu.upenn.zktester.ensemble.ZKEnsemble;
 import edu.upenn.zktester.ensemble.ZKProperty;
+import edu.upenn.zktester.harness.SequentialConsistency;
 import edu.upenn.zktester.util.Assert;
 import edu.upenn.zktester.util.Config;
 import org.apache.zookeeper.CreateMode;
@@ -12,6 +12,8 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 public class DivergenceResyncScenario2 implements Scenario {
 
@@ -20,8 +22,10 @@ public class DivergenceResyncScenario2 implements Scenario {
     private static final int TOTAL_SERVERS = 3;
 
     private final ZKEnsemble zkEnsemble = new ZKEnsemble(TOTAL_SERVERS);
-    private static final List<String> KEYS = List.of("/testDivergenceResync0", "/testDivergenceResync1");
-    private static final ZKProperty CONSISTENT_VALUES = new ConsistentValues(KEYS);
+    private static final List<String> KEYS = List.of("/key0", "/key1");
+    private static final ZKProperty CONSISTENT_VALUES = new SequentialConsistency(KEYS,
+            Set.of(Map.of("/key0", 0, "/key1", 1001),
+                    Map.of("/key0", 1000, "/key1", 1001)));
 
     @Override
     public void init(final Config config) throws IOException {

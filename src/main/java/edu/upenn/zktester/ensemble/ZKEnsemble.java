@@ -220,7 +220,7 @@ public class ZKEnsemble implements Watcher {
     }
 
     public boolean checkProperty(final ZKProperty property) throws KeeperException, InterruptedException {
-        return property.test(clients);
+        return property.test(clients, clientForServer);
     }
 
     public void stopEnsemble() throws InterruptedException, IOException {

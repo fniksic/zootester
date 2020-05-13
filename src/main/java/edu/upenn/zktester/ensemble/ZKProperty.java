@@ -8,6 +8,6 @@ import java.util.List;
 @FunctionalInterface
 public interface ZKProperty {
 
-    boolean test(List<ZooKeeper> zookeepers) throws InterruptedException, KeeperException;
+    boolean test(List<ZooKeeper> clients, List<Integer> clientForServer) throws InterruptedException, KeeperException;
 
 }

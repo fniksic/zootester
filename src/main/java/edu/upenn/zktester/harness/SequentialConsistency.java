@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 public class SequentialConsistency implements ZKProperty {
 
@@ -32,8 +33,8 @@ public class SequentialConsistency implements ZKProperty {
     }
 
     @Override
-    public boolean test(final List<ZooKeeper> zookeepers) throws InterruptedException, KeeperException {
-        final List<Map<String, Integer>> states = retrieveStates(zookeepers);
+    public boolean test(final List<ZooKeeper> clients, final List<Integer> clientForServer) {
+        final List<Map<String, Integer>> states = retrieveStates(clients, clientForServer);
         final Map<String, Integer> first = states.get(0);
 
         // The first state is allowed
@@ -43,20 +44,25 @@ public class SequentialConsistency implements ZKProperty {
                 && states.subList(1, states.size()).stream().allMatch(first::equals);
     }
 
-    private List<Map<String, Integer>> retrieveStates(final List<ZooKeeper> zooKeepers) {
-        return zooKeepers.stream().map(zk -> {
-            final Map<String, Integer> state = new HashMap<>();
-            keys.forEach(key -> {
-                try {
-                    final byte[] rawValue = zk.getData(key, false, null);
-                    final Integer value = Integer.valueOf(new String(rawValue));
-                    LOG.info("Association: {} -> {}", key, value);
-                    state.put(key, value);
-                } catch (KeeperException | InterruptedException e) {
-                    LOG.error("Couldn't retrieve data from a Zookeeper node (key = '{}')", key);
+    private List<Map<String, Integer>> retrieveStates(final List<ZooKeeper> clients,
+                                                      final List<Integer> clientForServer) {
+        return IntStream.range(0, clientForServer.size()).mapToObj(
+                serverId -> {
+                    final int clientId = clientForServer.get(serverId);
+                    final ZooKeeper zk = clients.get(clientId);
+                    final Map<String, Integer> state = new HashMap<>();
+                    keys.forEach(key -> {
+                        try {
+                            final byte[] rawValue = zk.getData(key, false, null);
+                            final Integer value = Integer.valueOf(new String(rawValue));
+                            LOG.info("Association @ {}: {} -> {}", serverId, key, value);
+                            state.put(key, value);
+                        } catch (KeeperException | InterruptedException e) {
+                            LOG.error("Couldn't retrieve data from server {} (key = '{}')", serverId, key);
+                        }
+                    });
+                    return state;
                 }
-            });
-            return state;
-        }).collect(Collectors.toList());
+        ).collect(Collectors.toList());
     }
 }
