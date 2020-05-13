@@ -4,6 +4,7 @@ import edu.upenn.zktester.ensemble.ZKRequest;
 import edu.upenn.zktester.util.ThrowingFunction;
 import org.apache.zookeeper.KeeperException;
 
+import java.io.IOException;
 import java.util.function.Function;
 
 public interface RequestPhase extends Phase {
@@ -20,7 +21,7 @@ public interface RequestPhase extends Phase {
 
     @Override
     default <T> T throwingMatch(ThrowingFunction<EmptyPhase, T> caseEmpty,
-                                ThrowingFunction<RequestPhase, T> caseRequest) throws InterruptedException, KeeperException {
+                                ThrowingFunction<RequestPhase, T> caseRequest) throws InterruptedException, KeeperException, IOException {
         return caseRequest.apply(this);
     }
 

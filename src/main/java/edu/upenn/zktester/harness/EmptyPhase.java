@@ -3,13 +3,14 @@ package edu.upenn.zktester.harness;
 import edu.upenn.zktester.util.ThrowingFunction;
 import org.apache.zookeeper.KeeperException;
 
+import java.io.IOException;
 import java.util.function.Function;
 
 public class EmptyPhase implements Phase {
 
     @Override
     public <T> T throwingMatch(ThrowingFunction<EmptyPhase, T> caseEmpty,
-                               ThrowingFunction<RequestPhase, T> caseRequest) throws InterruptedException, KeeperException {
+                               ThrowingFunction<RequestPhase, T> caseRequest) throws InterruptedException, KeeperException, IOException {
         return caseEmpty.apply(this);
     }
 
