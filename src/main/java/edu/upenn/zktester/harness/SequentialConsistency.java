@@ -58,9 +58,12 @@ public class SequentialConsistency implements ZKProperty {
                         try {
                             value = getValue(zk, key);
                         } catch (KeeperException | InterruptedException e) {
+                            LOG.warn("Couldn't retrieve {} from server {}. I'm going to retry", key, serverId);
                             retry = true;
                         }
 
+                        // Sometimes for unknown reason the value first can't be read,
+                        // but the read succeeds the second time.
                         if (retry) {
                             try {
                                 value = getValue(zk, key);
