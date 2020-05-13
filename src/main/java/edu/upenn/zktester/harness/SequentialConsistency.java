@@ -52,17 +52,32 @@ public class SequentialConsistency implements ZKProperty {
                     final ZooKeeper zk = clients.get(clientId);
                     final Map<String, Integer> state = new HashMap<>();
                     keys.forEach(key -> {
+                        boolean retry = false;
+                        Integer value = null;
+
                         try {
-                            final byte[] rawValue = zk.getData(key, false, null);
-                            final Integer value = Integer.valueOf(new String(rawValue));
-                            LOG.info("Association @ {}: {} -> {}", serverId, key, value);
-                            state.put(key, value);
+                            value = getValue(zk, key);
                         } catch (KeeperException | InterruptedException e) {
-                            LOG.error("Couldn't retrieve data from server {} (key = '{}')", serverId, key);
+                            retry = true;
                         }
+
+                        if (retry) {
+                            try {
+                                value = getValue(zk, key);
+                            } catch (KeeperException | InterruptedException e) {
+                                LOG.error("Couldn't retrieve {} from server {}", key, serverId);
+                            }
+                        }
+                        state.put(key, value);
+                        LOG.info("Association @ {}: {} -> {}", serverId, key, value);
                     });
                     return state;
                 }
         ).collect(Collectors.toList());
+    }
+
+    private Integer getValue(final ZooKeeper zk, final String key) throws KeeperException, InterruptedException {
+        final byte[] rawValue = zk.getData(key, false, null);
+        return Integer.valueOf(new String(rawValue));
     }
 }
