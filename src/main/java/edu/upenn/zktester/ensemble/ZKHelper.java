@@ -6,7 +6,7 @@ import java.nio.file.Path;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class ZKHelper {
-    public static final int CONNECTION_TIMEOUT = 15_000;
+    public static final int CONNECTION_TIMEOUT = 60_000;
 
     private static final Path VAR = Path.of("var");
     private static final String TEMP_DIRECTORY_PREFIX = "zknode";
