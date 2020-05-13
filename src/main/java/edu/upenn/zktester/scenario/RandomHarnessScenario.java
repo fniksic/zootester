@@ -16,10 +16,9 @@ public class RandomHarnessScenario implements Scenario {
     private static final Logger LOG = LoggerFactory.getLogger(RandomHarnessScenario.class);
 
     private final Random random = new Random();
-    private final RandomHarnessGenerator harnessGenerator =
-            new RandomHarnessGenerator(2, 3, 2, 3, random);
 
     private Config config;
+    private RandomHarnessGenerator harnessGenerator;
 
     @Override
     public void init(Config config) {
@@ -33,6 +32,8 @@ public class RandomHarnessScenario implements Scenario {
         }
         random.setSeed(seed);
         LOG.info("Initialized random number generator: seed = {}", seed);
+
+        harnessGenerator = new RandomHarnessGenerator(2, 3, config.getRequests(), config.getPhases(), random);
     }
 
     @Override
