@@ -43,7 +43,7 @@ public class DivergenceResyncScenario implements Scenario {
             Assert.assertTrue("There should be a leader", srvC >= 0);
 
             // Create initial znodes
-            zkEnsemble.handleRequest(srvC, zk -> {
+            zkEnsemble.handleRequest(srvC, (zk, serverId) -> {
                 zk.create(KEYS.get(0), "0".getBytes(), Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
                 zk.create(KEYS.get(1), "1".getBytes(), Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
             });
@@ -55,7 +55,7 @@ public class DivergenceResyncScenario implements Scenario {
 
             // Divergence
             zkEnsemble.crashServers(List.of(srvA));
-            zkEnsemble.handleRequest(srvB, zk -> {
+            zkEnsemble.handleRequest(srvB, (zk, serverId) -> {
                 zk.setData(KEYS.get(0), "1000".getBytes(), -1, null, null);
                 Thread.sleep(500);
 //                System.gc();
@@ -72,7 +72,7 @@ public class DivergenceResyncScenario implements Scenario {
             Assert.assertTrue("Server C should be the leader", zkEnsemble.getLeader() == srvC);
 
             // Divergence
-            zkEnsemble.handleRequest(srvC, zk -> {
+            zkEnsemble.handleRequest(srvC, (zk, serverId) -> {
                 zk.setData(KEYS.get(1), "1001".getBytes(), -1, null, null);
                 Thread.sleep(500);
 //                System.gc();

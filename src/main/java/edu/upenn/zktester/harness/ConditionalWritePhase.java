@@ -35,13 +35,14 @@ public class ConditionalWritePhase implements RequestPhase {
 
     @Override
     public ZKRequest getRequest(final Runnable onSuccess, final Runnable onUnknown) {
-        return zk -> {
-            LOG.info("Reading {}, expecting {}", readKey, readValue);
+        return (zk, serverId) -> {
+            LOG.info("Request @ {}: Read {} (expecting {})", serverId, readKey, readValue);
             zk.getData(readKey, false, (gReturnCode, gKey, gCtx, gResult, gStat) -> {
                 if (KeeperException.Code.OK.intValue() == gReturnCode) {
-                    LOG.info("Got back {} -> {}, expected {}", readKey, new String(gResult), readValue);
+                    LOG.info("Request @ {}: Got back {} -> {} (expected {})",
+                            serverId, readKey, new String(gResult), readValue);
                     if (Arrays.equals(gResult, rawReadValue)) {
-                        LOG.info("Setting {} -> {}", writeKey, writeValue);
+                        LOG.info("Request @ {}: Write {} -> {}", serverId, writeKey, writeValue);
                         zk.setData(writeKey, rawWriteValue, -1, (sReturnCode, sKey, sCtx, sStat) -> {
                             if (KeeperException.Code.OK.intValue() == sReturnCode) {
                                 onSuccess.run();

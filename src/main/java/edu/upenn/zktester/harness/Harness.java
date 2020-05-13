@@ -30,13 +30,16 @@ public class Harness {
     }
 
     public ZKRequest getInitRequest() {
-        return zk -> {
+        return (zk, serverId) -> {
+            final StringBuilder sb = new StringBuilder();
+            sb.append("Initial request @ ").append(serverId).append(": Write");
+            keys.forEach(key -> sb.append(' ').append(key).append(" -> ").append(0));
+            LOG.info(sb.toString());
             final byte[] rawValue = "0".getBytes();
             final List<Op> ops = keys.stream()
                     .map(key -> Op.create(key, rawValue, ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT))
                     .collect(Collectors.toList());
             zk.multi(ops);
-            keys.forEach(key -> LOG.info("Initial association: {} -> {}", key, 0));
         };
     }
 

@@ -42,9 +42,9 @@ public class TrueToThePaperScenario implements Scenario {
 
     public TrueToThePaperScenario() {
         this(new Harness(List.of(
-                new ConditionalWritePhase(0, "/key0", 0, "/key1", 100),
-                new ConditionalWritePhase(2, "/key1", 0, "/key1", 202),
-                new EmptyPhase()
+                new EmptyPhase(),
+                new ConditionalWritePhase(0, "/key1", 0, "/key1", 100),
+                new ConditionalWritePhase(0, "/key1", 100, "/key0", 200)
         ), 2));
     }
 

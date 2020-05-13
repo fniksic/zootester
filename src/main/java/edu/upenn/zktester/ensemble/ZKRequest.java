@@ -6,6 +6,6 @@ import org.apache.zookeeper.ZooKeeper;
 @FunctionalInterface
 public interface ZKRequest {
 
-    void apply(ZooKeeper zk) throws KeeperException, InterruptedException;
+    void apply(ZooKeeper zk, int serverId) throws KeeperException, InterruptedException;
 
 }

@@ -127,6 +127,20 @@ public class ZKEnsemble implements Watcher {
             LOG.info("Servers whose clients couldn't connect to them: {}", unmatchedServerIds);
             unmatchedServerIds.forEach(serverId -> canTalkTo[serverId][clientForServer.get(serverId)] = false);
             if (!reassignClients(canTalkTo, unmatchedServerIds)) {
+                final StringBuilder sb = new StringBuilder();
+                sb.append("Cannot reassign clients to servers. Final client-server conflicts:");
+                for (int i = 0; i < totalNodes; ++i) {
+                    sb.append(" ").append(i).append(": {");
+                    String sep = "";
+                    for (int j = 0; j < totalNodes; ++j) {
+                        if (!canTalkTo[j][i]) {
+                            sb.append(sep).append(j);
+                            sep = ",";
+                        }
+                    }
+                    sb.append("}");
+                }
+                LOG.error(sb.toString());
                 throw new RuntimeException("ZK clients cannot be reassigned to servers " +
                         "so that all connections can be established");
             }
@@ -202,7 +216,7 @@ public class ZKEnsemble implements Watcher {
 
     public void handleRequest(final int serverId, final ZKRequest request) throws KeeperException, InterruptedException {
         final int clientId = clientForServer.get(serverId);
-        request.apply(clients.get(clientId));
+        request.apply(clients.get(clientId), serverId);
     }
 
     public boolean checkProperty(final ZKProperty property) throws KeeperException, InterruptedException {
