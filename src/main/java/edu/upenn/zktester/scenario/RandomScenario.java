@@ -46,10 +46,11 @@ public class RandomScenario implements Scenario {
 
     public RandomScenario() {
         // TODO: Not ideal. In this scenario it is really desirable to issue requests
-        //       to nodes that are running. The probability that node 2 is running in
-        //       both write phases if there is 1 additional fault is 8/27 = 29%
+        //       to nodes that are running. The probability that node 1 is running in
+        //       the first phase and node 2 is running in the third phase, provided
+        //       that there is 1 additional fault, is 8/27 = 29%
         this(new Harness(List.of(
-                new UnconditionalWritePhase(2, "/key0", 102),
+                new UnconditionalWritePhase(1, "/key0", 101),
                 new EmptyPhase(),
                 new UnconditionalWritePhase(2, "/key1", 302)
         ), 2));
