@@ -24,6 +24,7 @@ public class ZKNodeHandler {
 
     private volatile QuorumPeerMainWithShutdown quorumPeerMain;
     private Thread currentThread;
+    private boolean running = false;
 
     public ZKNodeHandler(final int myId, final int clientPort, final String quorumCfgSection) throws IOException {
         this.myId = myId;
@@ -60,6 +61,7 @@ public class ZKNodeHandler {
             }
         });
         currentThread.start();
+        running = true;
     }
 
     public void shutdown() throws InterruptedException {
@@ -72,11 +74,16 @@ public class ZKNodeHandler {
                 LOG.error("Failed to join QuorumPeerMain's thread after 500 ms");
             }
         }
+        running = false;
     }
 
     public boolean isAlive() {
         final Thread t = currentThread;
         return t != null && t.isAlive();
+    }
+
+    public boolean isRunning() {
+        return running;
     }
 
     private void deleteDir(final Path dir) throws IOException {

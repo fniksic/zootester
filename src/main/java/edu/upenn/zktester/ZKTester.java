@@ -17,29 +17,26 @@ public class ZKTester {
             final Config config = Config.parseArgs(args);
             ZKHelper.setBasePort(config.getBasePort());
             final Scenario scenario;
-            if (config.getThreads() > 1 && !config.getScenario().equals("harness")) {
-                scenario = new ParallelScenario(config);
-            } else {
-                switch (config.getScenario()) {
-                    case "divergence":
-                        scenario = new DivergenceResyncScenario();
-                        break;
-                    case "divergence-2":
-                        scenario = new DivergenceResyncScenario2();
-                        break;
-                    case "random":
-                        scenario = new RandomScenario();
-                        break;
-                    case "paper":
-                        scenario = new TrueToThePaperScenario();
-                        break;
-                    case "harness":
-                        scenario = new RandomHarnessScenario();
-                        break;
-                    default:
-                        LOG.error("Unknown scenario!");
-                        throw new Exception("Unknown scenario");
-                }
+            switch (config.getScenario()) {
+                case "divergence":
+                    scenario = new DivergenceResyncScenario();
+                    break;
+                case "divergence-2":
+                    scenario = new DivergenceResyncScenario2();
+                    break;
+                case "random":
+                case "paper":
+                    scenario = new ParallelScenario();
+                    break;
+                case "harness":
+                    scenario = new RandomHarnessScenario();
+                    break;
+                case "baseline":
+                    scenario = new ParallelBaselineScenario();
+                    break;
+                default:
+                    LOG.error("Unknown scenario!");
+                    throw new Exception("Unknown scenario");
             }
             scenario.init(config);
             scenario.execute();

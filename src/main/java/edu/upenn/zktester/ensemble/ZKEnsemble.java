@@ -55,7 +55,7 @@ public class ZKEnsemble implements Watcher {
 
     public void startEnsemble() throws IOException, InterruptedException {
         for (int i = 0; i < totalNodes; ++i) {
-            servers.get(i).start();
+            startSingle(i);
             final ZooKeeper client = new ZooKeeper("127.0.0.1:" + clientPorts.get(i),
                     ZKHelper.CONNECTION_TIMEOUT, this);
             clients.add(client);
@@ -69,14 +69,22 @@ public class ZKEnsemble implements Watcher {
 
     public void startServers(final List<Integer> serverIds) throws InterruptedException, IOException {
         LOG.info("Starting servers: {}", serverIds);
-        for (final var i : serverIds) {
-            servers.get(i).start();
+        for (final int i : serverIds) {
+            startSingle(i);
         }
         waitForClients(States.CONNECTED, serverIds);
     }
 
+    public void startSingle(final int serverId) {
+        servers.get(serverId).start();
+    }
+
     public void startAllServers() throws InterruptedException, IOException {
         startServers(allIds);
+    }
+
+    public boolean isRunning(final int serverId) {
+        return servers.get(serverId).isRunning();
     }
 
     public int getLeader() {
@@ -88,10 +96,14 @@ public class ZKEnsemble implements Watcher {
 
     public void stopServers(final List<Integer> serverIds) throws InterruptedException, IOException {
         LOG.info("Stopping servers: {}", serverIds);
-        for (final var i : serverIds) {
-            servers.get(i).shutdown();
+        for (final int i : serverIds) {
+            stopSingle(i);
         }
         waitForClients(States.CONNECTING, serverIds);
+    }
+
+    public void stopSingle(final int serverId) throws InterruptedException {
+        servers.get(serverId).shutdown();
     }
 
     /***
@@ -103,8 +115,8 @@ public class ZKEnsemble implements Watcher {
      */
     public void crashServers(final List<Integer> serverIds) throws InterruptedException {
         LOG.info("Crashing servers: {}", serverIds);
-        for (final var i : serverIds) {
-            servers.get(i).shutdown();
+        for (final int i : serverIds) {
+            stopSingle(i);
         }
     }
 

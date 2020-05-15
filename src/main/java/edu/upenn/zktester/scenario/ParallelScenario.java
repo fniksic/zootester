@@ -11,14 +11,11 @@ public class ParallelScenario implements Scenario {
 
     private static final Logger LOG = LoggerFactory.getLogger(ParallelScenario.class);
 
-    private final Config config;
-
-    public ParallelScenario(final Config config) {
-        this.config = config;
-    }
+    private Config config;
 
     @Override
     public void init(final Config config) {
+        this.config = config;
     }
 
     @Override
