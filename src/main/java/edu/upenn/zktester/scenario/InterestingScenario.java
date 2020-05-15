@@ -15,6 +15,6 @@ public class InterestingScenario extends TrueToThePaperScenario {
                 new ConditionalWritePhase(0, "/key1", 101, "/key0", 200),
                 new ConditionalWritePhase(1, "/key1", 0, "/key1", 301),
                 new ConditionalWritePhase(0, "/key1", 0, "/key0", 400)
-        ), 2));
+        )));
     }
 }

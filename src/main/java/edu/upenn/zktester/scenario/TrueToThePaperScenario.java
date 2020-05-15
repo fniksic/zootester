@@ -45,7 +45,7 @@ public class TrueToThePaperScenario implements Scenario {
                 new UnconditionalWritePhase(1, "/key0", 101),
                 new EmptyPhase(),
                 new UnconditionalWritePhase(2, "/key1", 302)
-        ), 2));
+        )));
     }
 
     @Override

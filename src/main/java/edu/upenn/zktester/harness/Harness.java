@@ -29,6 +29,10 @@ public class Harness {
                 .collect(Collectors.toList());
     }
 
+    public Harness(final List<Phase> phases) {
+        this(phases, 2);
+    }
+
     public ZKRequest getInitRequest() {
         return (zk, serverId) -> {
             final StringBuilder sb = new StringBuilder();
