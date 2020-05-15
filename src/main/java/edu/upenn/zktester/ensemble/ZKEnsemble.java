@@ -76,7 +76,10 @@ public class ZKEnsemble implements Watcher {
     }
 
     public void startSingle(final int serverId) {
-        servers.get(serverId).start();
+        final ZKNodeHandler server = servers.get(serverId);
+        if (!server.isRunning()) {
+            server.start();
+        }
     }
 
     public void startAllServers() throws InterruptedException, IOException {
@@ -136,7 +139,13 @@ public class ZKEnsemble implements Watcher {
         // If state == States.CONNECTED, meaning we're waiting for clients to connect to the servers
         final boolean[][] canTalkTo = allCanTalkToAll(totalNodes);
         while (!unmatchedServerIds.isEmpty()) {
-            LOG.info("Servers whose clients couldn't connect to them: {}", unmatchedServerIds);
+            final List<States> clientStates = unmatchedServerIds.stream()
+                    .mapToInt(clientForServer::get)
+                    .mapToObj(clients::get)
+                    .map(ZooKeeper::getState)
+                    .collect(Collectors.toList());
+            LOG.info("Servers whose clients couldn't connect to them: {}. Corresponding client states: {}",
+                    unmatchedServerIds, clientStates);
             unmatchedServerIds.forEach(serverId -> canTalkTo[serverId][clientForServer.get(serverId)] = false);
             if (!reassignClients(canTalkTo, unmatchedServerIds)) {
                 final StringBuilder sb = new StringBuilder();

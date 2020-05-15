@@ -16,8 +16,6 @@ import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Semaphore;
-import java.util.function.Predicate;
-import java.util.stream.Collectors;
 
 public class BaselineScenario implements Scenario {
 
@@ -25,7 +23,6 @@ public class BaselineScenario implements Scenario {
 
     private static final int TOTAL_SERVERS = 3;
     private static final int QUORUM = 2;
-    private static final List<Integer> ALL_SERVERS = List.of(0, 1, 2);
 
     private final Random random = new Random();
     private final ZKEnsemble zkEnsemble = new ZKEnsemble(TOTAL_SERVERS);
@@ -134,10 +131,7 @@ public class BaselineScenario implements Scenario {
             // Wait for all requests' callbacks to return, either with an OK or undetermined result
             allRequestsDone.acquire(oustandingRequests);
 
-            final List<Integer> serversToStart = ALL_SERVERS.stream()
-                    .filter(Predicate.not(zkEnsemble::isRunning))
-                    .collect(Collectors.toList());
-            zkEnsemble.startServers(serversToStart);
+            zkEnsemble.startAllServers();
             final ZKProperty property =
                     harness.getConsistencyProperty(executedPhases.keySet(), maybeExecutedPhases.keySet());
             final boolean result = zkEnsemble.checkProperty(property);
