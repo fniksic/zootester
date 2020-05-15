@@ -24,7 +24,7 @@ public class UnconditionalWritePhase implements RequestPhase {
     }
 
     @Override
-    public ZKRequest getRequest(final Runnable onSuccess, final Runnable onUnknown) {
+    public ZKRequest getRequest(final Runnable onSuccess, final Runnable onUnknown, final Runnable cleanup) {
         return (zk, serverId) -> {
             LOG.info("Request @ {}: Write {} -> {}", serverId, writeKey, writeValue);
             zk.setData(writeKey, rawWriteValue, -1, (sReturnCode, sKey, sCtx, sStat) -> {
@@ -34,6 +34,7 @@ public class UnconditionalWritePhase implements RequestPhase {
                     LOG.warn("zk.setData() returned {}", KeeperException.Code.get(sReturnCode));
                     onUnknown.run();
                 }
+                cleanup.run();
             }, null);
             Thread.sleep(100);
 //            System.gc();

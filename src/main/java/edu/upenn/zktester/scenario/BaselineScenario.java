@@ -16,6 +16,7 @@ import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Semaphore;
+import java.util.concurrent.TimeUnit;
 
 public class BaselineScenario implements Scenario {
 
@@ -129,7 +130,11 @@ public class BaselineScenario implements Scenario {
             }
 
             // Wait for all requests' callbacks to return, either with an OK or undetermined result
-            allRequestsDone.acquire(oustandingRequests);
+            try {
+                allRequestsDone.tryAcquire(oustandingRequests, 5, TimeUnit.SECONDS);
+            } catch (final InterruptedException e) {
+                LOG.warn("Not all requests are done after waiting for 5 s. Proceeding anyway...");
+            }
 
             zkEnsemble.startAllServers();
             final ZKProperty property =
@@ -171,14 +176,14 @@ public class BaselineScenario implements Scenario {
                                         () -> {
                                             LOG.info("Phase {} request completed", phaseIndex);
                                             executedPhases.put(phaseIndex, true);
-                                            requestsDone.release();
                                         },
                                         // On undetermined result, add to the map of maybe executed phases
                                         () -> {
                                             LOG.warn("Phase {} request undetermined", phaseIndex);
                                             maybeExecutedPhases.put(phaseIndex, true);
-                                            requestsDone.release();
-                                        })
+                                        },
+                                        // As a cleanup, release the requestDone semaphore
+                                        () -> requestsDone.release())
                         );
                         return 1;
                     }

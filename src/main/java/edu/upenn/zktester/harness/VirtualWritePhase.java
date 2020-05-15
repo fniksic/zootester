@@ -21,7 +21,7 @@ public class VirtualWritePhase implements RequestPhase {
     }
 
     @Override
-    public ZKRequest getRequest(final Runnable onSuccess, final Runnable onUnknown) {
+    public ZKRequest getRequest(final Runnable onSuccess, final Runnable onUnknown, final Runnable cleanup) {
         throw new UnsupportedOperationException("VirtualWritePhase doesn't provide an actual Zookeeper request.");
     }
 

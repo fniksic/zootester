@@ -149,6 +149,9 @@ public class TrueToThePaperScenario implements Scenario {
                                         () -> {
                                             LOG.warn("Phase {} request undetermined", phaseIndex);
                                             maybeExecutedPhases.put(phaseIndex, true);
+                                        },
+                                        // No cleanup here
+                                        () -> {
                                         }
                                 ));
                             }

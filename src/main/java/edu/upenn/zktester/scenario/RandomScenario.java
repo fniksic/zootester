@@ -140,6 +140,9 @@ public class RandomScenario implements Scenario {
                                         () -> {
                                             LOG.info("Phase {} request undetermined", phaseIndex);
                                             maybeExecutedPhases.put(phaseIndex, true);
+                                        },
+                                        // No cleanup here
+                                        () -> {
                                         }
                                 ));
                             }

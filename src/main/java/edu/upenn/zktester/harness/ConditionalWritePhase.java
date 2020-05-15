@@ -34,7 +34,7 @@ public class ConditionalWritePhase implements RequestPhase {
     }
 
     @Override
-    public ZKRequest getRequest(final Runnable onSuccess, final Runnable onUnknown) {
+    public ZKRequest getRequest(final Runnable onSuccess, final Runnable onUnknown, final Runnable cleanup) {
         return (zk, serverId) -> {
             LOG.info("Request @ {}: Read {} (expecting {})", serverId, readKey, readValue);
             zk.getData(readKey, false, (gReturnCode, gKey, gCtx, gResult, gStat) -> {
@@ -57,6 +57,7 @@ public class ConditionalWritePhase implements RequestPhase {
                 } else {
                     LOG.warn("zk.getData() returned {}. Treating as non-executed.", KeeperException.Code.get(gReturnCode));
                 }
+                cleanup.run();
             }, null);
             Thread.sleep(100);
 //            System.gc();
