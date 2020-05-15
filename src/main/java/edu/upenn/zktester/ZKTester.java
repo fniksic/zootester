@@ -26,6 +26,7 @@ public class ZKTester {
                     break;
                 case "random":
                 case "paper":
+                case "interesting":
                     scenario = new ParallelScenario();
                     break;
                 case "harness":
@@ -33,9 +34,6 @@ public class ZKTester {
                     break;
                 case "baseline":
                     scenario = new ParallelBaselineScenario();
-                    break;
-                case "interesting":
-                    scenario = new InterestingScenario();
                     break;
                 default:
                     LOG.error("Unknown scenario!");

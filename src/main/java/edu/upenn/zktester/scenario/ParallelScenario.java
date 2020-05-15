@@ -32,6 +32,9 @@ public class ParallelScenario implements Scenario {
                         case "paper":
                             scenario = new TrueToThePaperScenario();
                             break;
+                        case "interesting":
+                            scenario = new InterestingScenario();
+                            break;
                         default:
                             throw new Exception("Unknown scenario");
                     }
