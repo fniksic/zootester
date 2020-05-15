@@ -15,6 +15,7 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Semaphore;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
@@ -23,11 +24,14 @@ public class BaselineScenario implements Scenario {
     private static final Logger LOG = LoggerFactory.getLogger(BaselineScenario.class);
 
     private static final int TOTAL_SERVERS = 3;
+    private static final int QUORUM = 2;
     private static final List<Integer> ALL_SERVERS = List.of(0, 1, 2);
 
     private final Random random = new Random();
     private final ZKEnsemble zkEnsemble = new ZKEnsemble(TOTAL_SERVERS);
     private final Harness harness;
+
+    private int oustandingRequests;
 
     public BaselineScenario(final Harness harness) {
         this.harness = harness;
@@ -91,6 +95,15 @@ public class BaselineScenario implements Scenario {
 
             final Map<Integer, Boolean> executedPhases = new ConcurrentHashMap<>();
             final Map<Integer, Boolean> maybeExecutedPhases = new ConcurrentHashMap<>();
+            final Semaphore allRequestsDone = new Semaphore(0);
+            oustandingRequests = 0;
+
+            // If the number of running servers drops to 0 (in general, QUORUM - 2), then
+            // after starting a single server, its client won't be able to connect to it,
+            // causing client reassignment and failure. Therefore, we batch the starts to
+            // always have a quorum when we're starting servers.
+            final Set<Integer> startBatch = new HashSet<>();
+
             boolean done = false;
             while (!events.isEmpty() && !done) {
                 final long pause = events.peek().getTimestamp() - System.currentTimeMillis();
@@ -105,17 +118,21 @@ public class BaselineScenario implements Scenario {
                     done = event.match(
                             executePhase -> {
                                 enqueueExecutePhase(events, phaseIterator);
-                                executeExecutePhase(executePhase, executedPhases, maybeExecutedPhases);
+                                oustandingRequests += executeExecutePhase(executePhase,
+                                        executedPhases, maybeExecutedPhases, allRequestsDone);
                                 return executePhase.getPhaseIndex() + 1 == totalPhases;
                             },
                             startOrStop -> {
                                 enqueueStartOrStop(events);
-                                executeStartOrStop(startOrStop);
+                                executeStartOrStop(startOrStop, startBatch);
                                 return false;
                             }
                     );
                 }
             }
+
+            // Wait for all requests' callbacks to return, either with an OK or undetermined result
+            allRequestsDone.acquire(oustandingRequests);
 
             final List<Integer> serversToStart = ALL_SERVERS.stream()
                     .filter(Predicate.not(zkEnsemble::isRunning))
@@ -142,15 +159,16 @@ public class BaselineScenario implements Scenario {
         }
     }
 
-    private void executeExecutePhase(final ExecutePhase executePhase,
-                                     final Map<Integer, Boolean> executedPhases,
-                                     final Map<Integer, Boolean> maybeExecutedPhases)
+    private int executeExecutePhase(final ExecutePhase executePhase,
+                                    final Map<Integer, Boolean> executedPhases,
+                                    final Map<Integer, Boolean> maybeExecutedPhases,
+                                    final Semaphore requestsDone)
             throws InterruptedException, IOException, KeeperException {
         LOG.info("Executing {}", executePhase);
         final int phaseIndex = executePhase.getPhaseIndex();
         final Phase phase = executePhase.getPhase();
-        phase.throwingMatch(
-                empty -> null,
+        return phase.throwingMatch(
+                empty -> 0,
                 requestPhase -> {
                     if (zkEnsemble.isRunning(requestPhase.getNode())) {
                         zkEnsemble.handleRequest(requestPhase.getNode(),
@@ -159,15 +177,18 @@ public class BaselineScenario implements Scenario {
                                         () -> {
                                             LOG.info("Phase {} request completed", phaseIndex);
                                             executedPhases.put(phaseIndex, true);
+                                            requestsDone.release();
                                         },
                                         // On undetermined result, add to the map of maybe executed phases
                                         () -> {
                                             LOG.warn("Phase {} request undetermined", phaseIndex);
                                             maybeExecutedPhases.put(phaseIndex, true);
+                                            requestsDone.release();
                                         })
                         );
+                        return 1;
                     }
-                    return null;
+                    return 0;
                 }
         );
     }
@@ -185,15 +206,24 @@ public class BaselineScenario implements Scenario {
         queue.add(startOrStop);
     }
 
-    private void executeStartOrStop(final StartOrStop startOrStop) throws InterruptedException {
+    private void executeStartOrStop(final StartOrStop startOrStop,
+                                    final Set<Integer> startBatch) throws InterruptedException, IOException {
         LOG.info("Executing {}", startOrStop);
         final int serverId = startOrStop.getServerId();
         if (zkEnsemble.isRunning(serverId)) {
-            LOG.info("Stopping {}", serverId);
-            zkEnsemble.stopSingle(serverId);
+            // We crash -- we don't care to wait for the clients to realize they're disconnected
+            zkEnsemble.crashServers(List.of(serverId));
         } else {
-            LOG.info("Starting {}", serverId);
-            zkEnsemble.startSingle(serverId);
+            if (zkEnsemble.totalRunningServers() < QUORUM - 1) {
+                startBatch.add(serverId);
+                LOG.info("Too few servers are running. Adding {} to the start batch, which is now {}", serverId, startBatch);
+                if (startBatch.size() >= QUORUM) {
+                    zkEnsemble.startServers(new ArrayList<>(startBatch));
+                    startBatch.clear();
+                }
+            } else {
+                zkEnsemble.startServers(List.of(serverId));
+            }
         }
     }
 

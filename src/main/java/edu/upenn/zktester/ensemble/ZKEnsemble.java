@@ -226,6 +226,10 @@ public class ZKEnsemble implements Watcher {
         waitForClients(state, allIds);
     }
 
+    public int totalRunningServers() {
+        return servers.stream().filter(ZKNodeHandler::isRunning).mapToInt(ignored -> 1).sum();
+    }
+
     public void handleRequest(final int serverId, final ZKRequest request) throws KeeperException, InterruptedException {
         final int clientId = clientForServer.get(serverId);
         request.apply(clients.get(clientId), serverId);

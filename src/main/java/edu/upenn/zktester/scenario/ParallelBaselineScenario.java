@@ -58,7 +58,7 @@ public class ParallelBaselineScenario implements Scenario {
                 try {
                     thread.join();
                 } catch (final InterruptedException e) {
-                    LOG.info("Interrupted from waiting on {}", thread.getName());
+                    LOG.warn("Interrupted from waiting on {}", thread.getName());
                 }
             }
         }
