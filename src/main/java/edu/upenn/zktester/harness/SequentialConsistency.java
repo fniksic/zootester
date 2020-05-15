@@ -58,7 +58,7 @@ public class SequentialConsistency implements ZKProperty {
                         try {
                             value = getValue(zk, key);
                         } catch (KeeperException | InterruptedException e) {
-                            LOG.warn("Couldn't retrieve {} from server {}. I'm going to retry", key, serverId);
+                            LOG.warn("Couldn't retrieve {} from server {}. I'm going to retry. {}", key, serverId, e.getMessage());
                             retry = true;
                         }
 
@@ -68,7 +68,7 @@ public class SequentialConsistency implements ZKProperty {
                             try {
                                 value = getValue(zk, key);
                             } catch (KeeperException | InterruptedException e) {
-                                LOG.error("Couldn't retrieve {} from server {}", key, serverId);
+                                LOG.error("Couldn't retrieve {} from server {}. {}", key, serverId, e.getMessage());
                             }
                         }
                         state.put(key, value);
