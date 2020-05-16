@@ -24,6 +24,9 @@ public class ZKTester {
                 case "divergence-2":
                     scenario = new DivergenceResyncScenario2();
                     break;
+                case "failure-sc":
+                    scenario = new FailureSC();
+                    break;
                 case "random":
                 case "paper":
                 case "interesting":
