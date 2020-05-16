@@ -41,6 +41,9 @@ public class ZKTester {
                 case "baseline-harness-long":
                     scenario = new ParallelBaselineHarnessLong();
                     break;
+                case "baseline-interesting":
+                    scenario = new InterestingBaselineScenario();
+                    break;
                 default:
                     LOG.error("Unknown scenario!");
                     throw new Exception("Unknown scenario");
